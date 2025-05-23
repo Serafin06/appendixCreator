@@ -1,7 +1,7 @@
 package pl.marko.bazaDanych
 
 import org.hibernate.Session
-import pl.marko.bazaDanych.Tabele.*
+
 
 object DaoTabele {
 

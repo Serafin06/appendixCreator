@@ -5,6 +5,6 @@ import org.hibernate.cfg.Configuration
 
 object HibernateUtil {
     val sessionFactory: SessionFactory = Configuration()
-        .configure("pl/marko/bazaDanych/hibernate.cfg.xml")
+        .configure("resources/hibernate.cfg.xml")
         .buildSessionFactory()
 }
