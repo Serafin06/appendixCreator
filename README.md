@@ -111,6 +111,13 @@ Contributions are welcome!
 
 ---
 
+## 👤 Author
+
+Created with passion by **Serafin06**
+✉️ Feel free to connect or contribute!
+
+---
+
 ## 📄 License
 
 Licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
