@@ -47,8 +47,8 @@ Kopiuj
 Edytuj
 ./gradlew run
 Or run Main.kt from your IDE.
-
-📁 Project Structure
+--
+## 📁 Project Structure
 bash
 Kopiuj
 Edytuj
@@ -64,23 +64,24 @@ appendixCreator/
 ├── build.gradle.kts
 ├── settings.gradle.kts
 └── README.md
-🧪 Sample Data
+--
+## 🧪 Sample Data
 You can prepopulate materials and buildings manually or by adding seed logic during initialization. PostgreSQL is used for persistent storage.
 
-🔜 Planned Features
+## 🔜 Planned Features
 Export invoice appendices to PDF
 
-Editable job entries
+- Editable job entries
 
-History of reports per month
+- History of reports per month
 
-Authentication (optional)
+- Authentication (optional)
 
-Extended material and VAT management
+- Extended material and VAT management
 
-Optional SQLite support for offline/local usage
-
-🤝 Contributing
+- Optional SQLite support for offline/local usage
+---
+## 🤝 Contributing
 Contributions are welcome! If you'd like to contribute:
 
 Fork the repository
@@ -90,6 +91,6 @@ Create a new branch
 Commit your changes
 
 Open a Pull Request
-
-📜 License
+--
+## 📜 License
 This project is licensed under the MIT License. See the LICENSE file for details.
