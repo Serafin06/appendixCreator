@@ -96,7 +96,6 @@ appendixCreator/
 - [ ] Basic dashboard with monthly overview
 - [ ] History view for previous reports
 - [ ] Optional authentication layer
-- [ ] Support for SQLite (offline mode)
 
 ---
 
