@@ -113,7 +113,7 @@ Contributions are welcome!
 
 ## 👤 Author
 
-Created with passion by **Serafin06**
+Made with ❤️ by **Serafin06**
 ✉️ Feel free to connect or contribute!
 
 ---
