@@ -49,9 +49,7 @@ Edytuj
 Or run Main.kt from your IDE.
 --
 ## 📁 Project Structure
-bash
-Kopiuj
-Edytuj
+
 appendixCreator/
 ├── src/
 │   └── main/
@@ -64,6 +62,7 @@ appendixCreator/
 ├── build.gradle.kts
 ├── settings.gradle.kts
 └── README.md
+
 --
 ## 🧪 Sample Data
 You can prepopulate materials and buildings manually or by adding seed logic during initialization. PostgreSQL is used for persistent storage.
