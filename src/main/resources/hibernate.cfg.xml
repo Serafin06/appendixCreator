@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+        <!-- Supabase PostgreSQL connection -->
+        <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
+        <property name="hibernate.connection.url">jdbc:postgresql://db.TWOJ_PROJECT.supabase.co:5432/postgres</property>
+        <property name="hibernate.connection.username">postgres</property>
+        <property name="hibernate.connection.password">TWOJE_HASLO</property>
+
+        <!-- Dialect -->
+        <property name="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+
+        <!-- Connection pool settings -->
+        <property name="hibernate.hikari.connectionTimeout">20000</property>
+        <property name="hibernate.hikari.minimumIdle">5</property>
+        <property name="hibernate.hikari.maximumPoolSize">20</property>
+        <property name="hibernate.hikari.idleTimeout">300000</property>
+
+        <!-- SQL logging -->
+        <property name="hibernate.show_sql">true</property>
+        <property name="hibernate.format_sql">true</property>
+
+        <!-- Validate schema -->
+        <property name="hibernate.hbm2ddl.auto">validate</property>
+
+        <!-- Entity mappings -->
+        <mapping class="pl.rafapp.appendixCreator.database.Budynek"/>
+        <mapping class="pl.rafapp.appendixCreator.database.Material"/>
+        <mapping class="pl.rafapp.appendixCreator.database.Praca"/>
+        <mapping class="pl.rafapp.appendixCreator.database.PracaMaterial"/>
+    </session-factory>
+</hibernate-configuration>
