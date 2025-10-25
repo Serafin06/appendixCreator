@@ -1,8 +1,8 @@
 package pl.rafapp.appendixCreator.Data.repo
 
 import org.hibernate.Session
-import pl.rafapp.appendixCreator.Data.DataBase.HibernateConfig
 import pl.rafapp.appendixCreator.Data.MaterialEntity
+import pl.rafapp.appendixCreator.Data.database.HibernateConfig
 import pl.rafapp.appendixCreator.dataBase.repo.MaterialRepo
 import pl.rafapp.appendixCreator.domena.Material
 
@@ -30,6 +30,20 @@ class MatelalRepoImpl : MaterialRepo {
         entity.toDomain()
     }
 
+    override fun aktualizuj(material: Material): Material = useSession { session ->
+        val entity = session.get(MaterialEntity::class.java, material.id)
+            ?: throw IllegalArgumentException("Materiał o ID ${material.id} nie istnieje")
+
+        val updated = entity.copy(
+            nazwa = material.nazwa,
+            jednostka = material.jednostka,
+            cenaZaJednostke = material.cenaZaJednostke
+        )
+        session.merge(updated)
+        session.flush()
+        updated.toDomain()
+    }
+
     override fun pobierzWszystkie(): List<Material> = useSession { session ->
         session.createQuery("FROM MaterialEntity", MaterialEntity::class.java)
             .resultList
@@ -42,8 +56,7 @@ class MatelalRepoImpl : MaterialRepo {
 
     override fun usun(id: Long) = useSession { session ->
         val entity = session.get(MaterialEntity::class.java, id)
-        if (entity != null) {
-            session.remove(entity)
-        }
+            ?: throw IllegalArgumentException("Materiał o ID $id nie istnieje")
+        session.remove(entity)
     }
 }

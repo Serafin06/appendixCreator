@@ -1,9 +1,8 @@
-package pl.rafapp.appendixCreator.Data.DataBase
+package pl.rafapp.appendixCreator.Data.database
 
 import org.hibernate.SessionFactory
 import org.hibernate.cfg.Configuration
-import pl.rafapp.appendixCreator.Data.BudynekEntity
-import pl.rafapp.appendixCreator.Data.MaterialEntity
+import pl.rafapp.appendixCreator.Data.*
 import java.util.Properties
 
 object HibernateConfig {
@@ -12,13 +11,13 @@ object HibernateConfig {
         try {
             val configuration = Configuration()
 
-            // Properties z kodu (nie potrzebujesz hibernate.cfg.xml!)
             configuration.properties = createProperties()
 
-            // Dodaj encje
+            // Wszystkie encje
             configuration.addAnnotatedClass(BudynekEntity::class.java)
             configuration.addAnnotatedClass(MaterialEntity::class.java)
-            // TODO: Dodaj PracaEntity i PracaMaterialEntity jak je stworzysz
+            configuration.addAnnotatedClass(PracaEntity::class.java)
+            configuration.addAnnotatedClass(PracaMaterialEntity::class.java)
 
             configuration.buildSessionFactory()
         } catch (ex: Throwable) {
@@ -28,20 +27,24 @@ object HibernateConfig {
 
     private fun createProperties(): Properties {
         return Properties().apply {
-            // Database connection (ZMIEŃ NA SWOJE DANE SUPABASE!)
+            // Database connection
             setProperty("hibernate.connection.driver_class", "org.postgresql.Driver")
-            setProperty("hibernate.connection.url", "jdbc:postgresql://db.TWOJ_PROJECT.supabase.co:5432/postgres")
-            setProperty("hibernate.connection.username", "postgres")
-            setProperty("hibernate.connection.password", "TWOJE_HASLO")
+            setProperty("hibernate.connection.url",
+                System.getenv("DB_URL") ?: "jdbc:postgresql://localhost:5432/postgres")
+            setProperty("hibernate.connection.username",
+                System.getenv("DB_USER") ?: "postgres")
+            setProperty("hibernate.connection.password",
+                System.getenv("DB_PASSWORD") ?: "")
 
             // Hibernate settings
             setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
-            setProperty("hibernate.hbm2ddl.auto", "validate") // validate = sprawdza czy tabele istnieją
-            setProperty("hibernate.show_sql", "true") // pokaż SQL w konsoli
-            setProperty("hibernate.format_sql", "true") // formatuj SQL czytelnie
+            setProperty("hibernate.hbm2ddl.auto", "validate")
+            setProperty("hibernate.show_sql", "true")
+            setProperty("hibernate.format_sql", "true")
 
-            // Connection pool (HikariCP)
-            setProperty("hibernate.connection.provider_class", "org.hibernate.hikaricp.internal.HikariCPConnectionProvider")
+            // Connection pool
+            setProperty("hibernate.connection.provider_class",
+                "org.hibernate.hikaricp.internal.HikariCPConnectionProvider")
             setProperty("hibernate.hikari.minimumIdle", "5")
             setProperty("hibernate.hikari.maximumPoolSize", "20")
             setProperty("hibernate.hikari.idleTimeout", "300000")

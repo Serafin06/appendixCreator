@@ -2,7 +2,7 @@ package pl.rafapp.appendixCreator.Data.repo
 
 import org.hibernate.Session
 import pl.rafapp.appendixCreator.Data.BudynekEntity
-import pl.rafapp.appendixCreator.Data.DataBase.HibernateConfig
+import pl.rafapp.appendixCreator.Data.database.HibernateConfig
 import pl.rafapp.appendixCreator.dataBase.repo.BudynekRepo
 import pl.rafapp.appendixCreator.domena.Budynek
 
@@ -30,6 +30,16 @@ class BudynekRepoImpl : BudynekRepo {
         entity.toDomain()
     }
 
+    override fun aktualizuj(budynek: Budynek): Budynek = useSession { session ->
+        val entity = session.get(BudynekEntity::class.java, budynek.id)
+            ?: throw IllegalArgumentException("Budynek o ID ${budynek.id} nie istnieje")
+
+        val updated = entity.copy(adres = budynek.adres)
+        session.merge(updated)
+        session.flush()
+        updated.toDomain()
+    }
+
     override fun pobierzWszystkie(): List<Budynek> = useSession { session ->
         session.createQuery("FROM BudynekEntity", BudynekEntity::class.java)
             .resultList
@@ -42,8 +52,7 @@ class BudynekRepoImpl : BudynekRepo {
 
     override fun usun(id: Long) = useSession { session ->
         val entity = session.get(BudynekEntity::class.java, id)
-        if (entity != null) {
-            session.remove(entity)
-        }
+            ?: throw IllegalArgumentException("Budynek o ID $id nie istnieje")
+        session.remove(entity)
     }
 }
