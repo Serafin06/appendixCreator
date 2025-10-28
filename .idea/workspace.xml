@@ -4,20 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0f8158a1-9c86-4002-bc60-53dcf8afbfd8" name="Changes" comment="v 0.0.2">
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/GUI/Compose/ViewModel/PracaVM.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/GUI/Compose/screen/PracaScreen.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/domena/Wizard.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/ImportBuildings.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/MaterialPrice.kt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/SaveWork.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Data/repo/BudynekRepoImpl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Data/repo/BudynekRepoImpl.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Data/repo/MatelalRepoImpl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Data/repo/MatelalRepoImpl.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Data/repo/PracaRepoImpl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Data/repo/PracaRepoImpl.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/domena/repo/BudynekRepo.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/domena/repo/BudynekRepo.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/domena/repo/MaterialRepo.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/domena/repo/MaterialRepo.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/domena/repo/PracaRepo.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/domena/repo/PracaRepo.kt" afterDir="false" />
+    <list default="true" id="0f8158a1-9c86-4002-bc60-53dcf8afbfd8" name="Changes" comment="v 0.1.0">
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/ImportMaterial.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/MaterialUses.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,7 +83,7 @@
       <option name="presentableId" value="Default" />
       <updated>1761246688870</updated>
       <workItem from="1761417902911" duration="2986000" />
-      <workItem from="1761674131444" duration="2645000" />
+      <workItem from="1761674131444" duration="2942000" />
     </task>
     <task id="LOCAL-00001" summary="v 0.0.2">
       <option name="closed" value="true" />
@@ -104,7 +93,15 @@
       <option name="project" value="LOCAL" />
       <updated>1761420831292</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="v 0.1.0">
+      <option name="closed" value="true" />
+      <created>1761677112955</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1761677112959</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -112,6 +109,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="v 0.0.2" />
-    <option name="LAST_COMMIT_MESSAGE" value="v 0.0.2" />
+    <MESSAGE value="v 0.1.0" />
+    <option name="LAST_COMMIT_MESSAGE" value="v 0.1.0" />
   </component>
 </project>
