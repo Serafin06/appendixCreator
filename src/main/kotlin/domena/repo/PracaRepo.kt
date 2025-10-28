@@ -1,4 +1,4 @@
-package pl.rafapp.appendixCreator.dataBase.repo
+package pl.rafapp.appendixCreator.domena.repo
 
 import pl.rafapp.appendixCreator.domena.Praca
 

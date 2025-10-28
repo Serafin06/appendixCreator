@@ -3,8 +3,8 @@ package pl.rafapp.appendixCreator.Data.repo
 import org.hibernate.Session
 import pl.rafapp.appendixCreator.Data.PracaEntity
 import pl.rafapp.appendixCreator.Data.database.HibernateConfig
-import pl.rafapp.appendixCreator.dataBase.repo.PracaRepo
 import pl.rafapp.appendixCreator.domena.Praca
+import pl.rafapp.appendixCreator.domena.repo.PracaRepo
 
 class PracaRepoImpl : PracaRepo {
 

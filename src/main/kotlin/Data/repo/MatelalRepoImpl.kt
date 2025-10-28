@@ -3,8 +3,8 @@ package pl.rafapp.appendixCreator.Data.repo
 import org.hibernate.Session
 import pl.rafapp.appendixCreator.Data.MaterialEntity
 import pl.rafapp.appendixCreator.Data.database.HibernateConfig
-import pl.rafapp.appendixCreator.dataBase.repo.MaterialRepo
 import pl.rafapp.appendixCreator.domena.Material
+import pl.rafapp.appendixCreator.domena.repo.MaterialRepo
 
 class MatelalRepoImpl : MaterialRepo {
 

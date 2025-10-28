@@ -4,26 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0f8158a1-9c86-4002-bc60-53dcf8afbfd8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/aws.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/kotlin/Data/repo/PracaRepoImpl.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/kotlinc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="0f8158a1-9c86-4002-bc60-53dcf8afbfd8" name="Changes" comment="v 0.0.2">
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/GUI/Compose/ViewModel/PracaVM.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/GUI/Compose/screen/PracaScreen.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/domena/Wizard.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/ImportBuildings.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/MaterialPrice.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/SaveWork.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Data/DataBase/HibernateConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Data/DataBase/HibernateConfig.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Data/Encje.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Data/Encje.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/Data/repo/BudynekRepoImpl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Data/repo/BudynekRepoImpl.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/Data/repo/MatelalRepoImpl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Data/repo/MatelalRepoImpl.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Main.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Main.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/dataBase/DatabaseDao.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/dataBase/Encje.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/dataBase/HibernateUtil.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/Data/repo/PracaRepoImpl.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/Data/repo/PracaRepoImpl.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/domena/repo/BudynekRepo.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/domena/repo/BudynekRepo.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/domena/repo/MaterialRepo.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/domena/repo/MaterialRepo.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/kotlin/domena/repo/PracaRepo.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/domena/repo/PracaRepo.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/BudynkiUses.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/logic/usecase/BudynkiUses.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,26 +32,26 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Kotlin File" />
         <option value="Kotlin Class" />
+        <option value="Kotlin File" />
       </list>
     </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "Serafin06"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Serafin06&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/Serafin06/appendixCreator.git",
-    "accountId": "5a6d8c08-c1f8-4262-afe7-e12b4aa439dc"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Serafin06/appendixCreator.git&quot;,
+    &quot;accountId&quot;: &quot;5a6d8c08-c1f8-4262-afe7-e12b4aa439dc&quot;
   }
-}]]></component>
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
 }</component>
@@ -66,23 +60,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Gradle.Build appendixCreator.executor": "Run",
-    "Kotlin.MainKt.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "master",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "onboarding.tips.debug.path": "C:/Users/marko/IdeaProjects/appendixCreator/src/main/kotlin/Main.kt",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Gradle.Build appendixCreator.executor&quot;: &quot;Run&quot;,
+    &quot;Kotlin.MainKt.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;C:/Users/marko/IdeaProjects/appendixCreator/src/main/kotlin/Main.kt&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -99,11 +93,25 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1761246688870</updated>
-      <workItem from="1761417902911" duration="2755000" />
+      <workItem from="1761417902911" duration="2986000" />
+      <workItem from="1761674131444" duration="2645000" />
     </task>
+    <task id="LOCAL-00001" summary="v 0.0.2">
+      <option name="closed" value="true" />
+      <created>1761420831292</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1761420831292</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="v 0.0.2" />
+    <option name="LAST_COMMIT_MESSAGE" value="v 0.0.2" />
   </component>
 </project>

@@ -3,8 +3,8 @@ package pl.rafapp.appendixCreator.Data.repo
 import org.hibernate.Session
 import pl.rafapp.appendixCreator.Data.BudynekEntity
 import pl.rafapp.appendixCreator.Data.database.HibernateConfig
-import pl.rafapp.appendixCreator.dataBase.repo.BudynekRepo
 import pl.rafapp.appendixCreator.domena.Budynek
+import pl.rafapp.appendixCreator.domena.repo.BudynekRepo
 
 class BudynekRepoImpl : BudynekRepo {
 
