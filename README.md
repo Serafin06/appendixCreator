@@ -47,7 +47,7 @@ src/main/kotlin/
 
 1. **Clone the repository**
 ```bash
-   git clone https://github.com/yourusername/appendixCreator.git
+   git clone https://github.com/Serafin06/appendixCreator.git
    cd appendixCreator
 ```
 
