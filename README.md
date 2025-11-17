@@ -47,7 +47,7 @@ src/main/kotlin/
 
 1. **Clone the repository**
 ```bash
-   git clone https://github.com/yourusername/appendixCreator.git
+   git clone https://github.com/Serafin06/appendixCreator.git
    cd appendixCreator
 ```
 
@@ -208,7 +208,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **RafApp**
 
-- GitHub: [@yourusername](https://github.com/yourusername)
+- GitHub: [@Serafin06](https://github.com/Serafin06)
 
 ## 🙏 Acknowledgments
 
