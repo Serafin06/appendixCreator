@@ -22,12 +22,13 @@ import pl.rafapp.marko.appendixCreator.presentation.viewmodel.BudynkiViewModel
 
 @Composable
 fun BudynkiScreen(viewModel: BudynkiViewModel) {
-    var nowyAdres by remember { mutableStateOf("") }
+    var miasto by remember { mutableStateOf("Katowice") }  // Domyślne
+    var ulica by remember { mutableStateOf("") }
     var budynekDoUsuniecia by remember { mutableStateOf<Budynek?>(null) }
 
     LaunchedEffect(viewModel.successMessage) {
         if (viewModel.successMessage != null) {
-            nowyAdres = ""
+            ulica = ""  // Czyścimy tylko ulicę, miasto zostaje
         }
     }
 
@@ -36,7 +37,7 @@ fun BudynkiScreen(viewModel: BudynkiViewModel) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Komunikaty
+        // Komunikaty (bez zmian - tylko skopiuj z poprzedniej wersji)
         viewModel.errorMessage?.let { error ->
             Card(
                 colors = CardDefaults.cardColors(
@@ -67,7 +68,7 @@ fun BudynkiScreen(viewModel: BudynkiViewModel) {
             }
         }
 
-        // Formularz dodawania
+        // Formularz dodawania - ZMIENIONY!
         Card(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -79,14 +80,31 @@ fun BudynkiScreen(viewModel: BudynkiViewModel) {
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
+                // Miasto
                 OutlinedTextField(
-                    value = nowyAdres,
+                    value = miasto,
                     onValueChange = {
-                        nowyAdres = it
+                        miasto = it
                         viewModel.clearMessages()
                     },
-                    label = { Text("Adres budynku") },
-                    placeholder = { Text("np. ul. Kwiatowa 5, Warszawa") },
+                    label = { Text("Miasto") },
+                    placeholder = { Text("Katowice") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = !viewModel.isLoading
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Ulica
+                OutlinedTextField(
+                    value = ulica,
+                    onValueChange = {
+                        ulica = it
+                        viewModel.clearMessages()
+                    },
+                    label = { Text("Ulica") },
+                    placeholder = { Text("np. ul. Kwiatowa 5") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !viewModel.isLoading
@@ -95,9 +113,9 @@ fun BudynkiScreen(viewModel: BudynkiViewModel) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
-                    onClick = { viewModel.dodajBudynek(nowyAdres) },
+                    onClick = { viewModel.dodajBudynek(miasto, ulica) },
                     modifier = Modifier.align(Alignment.End),
-                    enabled = !viewModel.isLoading && nowyAdres.isNotBlank()
+                    enabled = !viewModel.isLoading && miasto.isNotBlank() && ulica.isNotBlank()
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -152,7 +170,7 @@ fun BudynkiScreen(viewModel: BudynkiViewModel) {
     budynekDoUsuniecia?.let { budynek ->
         ConfirmDialog(
             title = "Usunąć budynek?",
-            message = "Czy na pewno chcesz usunąć: ${budynek.adres}?\nSpowoduje to również usunięcie wszystkich prac dla tego budynku!",
+            message = "Czy na pewno chcesz usunąć: ${budynek.pelnyAdres}?\nSpowoduje to również usunięcie wszystkich prac dla tego budynku!",
             onConfirm = {
                 viewModel.usunBudynek(budynek.id)
                 budynekDoUsuniecia = null
@@ -175,8 +193,13 @@ fun BudynekCard(budynek: Budynek, onDelete: () -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    budynek.adres,
+                    budynek.ulica,
                     style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    budynek.miasto,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     "ID: ${budynek.id}",

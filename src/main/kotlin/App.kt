@@ -28,9 +28,9 @@ fun App(container: DependencyContainer) {
         onTabSelected = { selectedTab = it }
     ) {
         when (selectedTab) {
-            0 -> BudynkiScreen(budynkiViewModel)
-            1 -> MaterialyScreen(materialyViewModel)
-            2 -> PraceScreen(praceViewModel)
+            0 -> PraceScreen(praceViewModel)
+            1 -> BudynkiScreen(budynkiViewModel)
+            2 -> MaterialyScreen(materialyViewModel)
         }
     }
 }

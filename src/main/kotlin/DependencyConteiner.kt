@@ -3,6 +3,7 @@ package pl.rafapp.marko.appendixCreator
 import pl.rafapp.marko.appendixCreator.application.usecase.budynek.DodajBudynekUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynkiUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.budynek.UsunBudynekUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.material.AktualizujMaterialUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.material.DodajMaterialUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.material.PobierzMaterialyUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.material.UsunMaterialUseCase
@@ -33,6 +34,7 @@ class DependencyContainer {
 
     // Use Cases - Materiały
     val dodajMaterialUseCase = DodajMaterialUseCase(materialRepository)
+    val aktualizujMaterialUseCase = AktualizujMaterialUseCase(materialRepository)
     val pobierzMaterialyUseCase = PobierzMaterialyUseCase(materialRepository)
     val usunMaterialUseCase = UsunMaterialUseCase(materialRepository)
 
@@ -50,6 +52,7 @@ class DependencyContainer {
 
     fun createMaterialyViewModel() = MaterialyViewModel(
         dodajUseCase = dodajMaterialUseCase,
+        aktualizujUseCase = aktualizujMaterialUseCase,
         pobierzUseCase = pobierzMaterialyUseCase,
         usunUseCase = usunMaterialUseCase
     )

@@ -166,7 +166,7 @@ fun PracaCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        budynek?.adres ?: "Budynek usunięty",
+                        budynek?.pelnyAdres ?: "Budynek usunięty",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
@@ -302,7 +302,7 @@ fun FormularzPracy(
                             onExpandedChange = { rozwiniety = it }
                         ) {
                             OutlinedTextField(
-                                value = viewModel.budynki.find { it.id == wybranyBudynekId }?.adres ?: "",
+                                value = viewModel.budynki.find { it.id == wybranyBudynekId }?.ulica ?: "",
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Budynek") },
@@ -317,7 +317,7 @@ fun FormularzPracy(
                             ) {
                                 viewModel.budynki.forEach { budynek ->
                                     DropdownMenuItem(
-                                        text = { Text(budynek.adres) },
+                                        text = { Text(budynek.ulica) },
                                         onClick = {
                                             wybranyBudynekId = budynek.id
                                             rozwiniety = false

@@ -52,16 +52,16 @@ class BudynkiViewModel(
         }
     }
 
-    fun dodajBudynek(adres: String) {
+    fun dodajBudynek(miasto: String, ulica: String) {
         scope.launch {
             isLoading = true
             errorMessage = null
             successMessage = null
 
             withContext(Dispatchers.IO) {
-                dodajUseCase(adres)
+                dodajUseCase(miasto, ulica)
                     .onSuccess {
-                        successMessage = "Dodano budynek: ${it.adres}"
+                        successMessage = "Dodano budynek: ${it.pelnyAdres}"
                         zaladujBudynki()
                     }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }

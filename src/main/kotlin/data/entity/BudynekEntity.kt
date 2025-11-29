@@ -14,18 +14,23 @@ data class BudynekEntity(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
+    @Column(nullable = false)
+    val miasto: String = "",
+
     @Column(nullable = false, length = 500)
-    val adres: String = ""
+    val ulica: String = ""
 ) {
     fun toDomain() = Budynek(
         id = id,
-        adres = adres
+        miasto = miasto,
+        ulica = ulica
     )
 
     companion object {
         fun fromDomain(budynek: Budynek) = BudynekEntity(
             id = budynek.id,
-            adres = budynek.adres
+            miasto = budynek.miasto,
+            ulica = budynek.ulica
         )
     }
 }

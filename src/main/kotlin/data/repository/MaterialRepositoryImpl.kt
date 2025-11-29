@@ -33,6 +33,19 @@ class MaterialRepositoryImpl : MaterialRepository {
         session.flush()
         entity.toDomain()
     }
+    override fun aktualizuj(material: Material): Material = useSession { session ->
+        val entity = session.get(MaterialEntity::class.java, material.id)
+            ?: throw IllegalArgumentException("Materiał o ID ${material.id} nie istnieje")
+
+        val updated = entity.copy(
+            nazwa = material.nazwa,
+            jednostka = material.jednostka,
+            cenaZaJednostke = material.cenaZaJednostke
+        )
+        session.merge(updated)
+        session.flush()
+        updated.toDomain()
+    }
 
     override fun pobierzWszystkie(): List<Material> = useSession { session ->
         session.createQuery("FROM MaterialEntity ORDER BY nazwa", MaterialEntity::class.java)

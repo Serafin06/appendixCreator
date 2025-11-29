@@ -6,5 +6,9 @@ package pl.rafapp.marko.appendixCreator.domain.model
  */
 data class Budynek(
     val id: Long = 0,
-    val adres: String
-)
+    val miasto: String,
+    val ulica: String
+){
+    val pelnyAdres: String
+        get() = "$ulica, $miasto"
+}

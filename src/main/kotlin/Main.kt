@@ -5,14 +5,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import pl.rafapp.marko.appendixCreator.application.usecase.budynek.*
-import pl.rafapp.marko.appendixCreator.application.usecase.material.*
-import pl.rafapp.marko.appendixCreator.application.usecase.praca.*
 import pl.rafapp.marko.appendixCreator.config.DatabaseConfig
-import pl.rafapp.marko.appendixCreator.data.repository.*
-import pl.rafapp.marko.appendixCreator.presentation.ui.screen.*
-import pl.rafapp.marko.appendixCreator.presentation.viewmodel.*
 import androidx.compose.ui.unit.dp
+import pl.rafapp.marko.appendixCreator.presentation.ui.theme.AppColors
 
 /**
  * Główna funkcja aplikacji
@@ -44,7 +39,9 @@ fun main() = application {
         title = "Appendix Creator",
         state = rememberWindowState(width = 1200.dp, height = 800.dp)
     ) {
-        MaterialTheme {
+        MaterialTheme(
+            colorScheme = AppColors.darkScheme
+        ) {
             App(container)
         }
     }

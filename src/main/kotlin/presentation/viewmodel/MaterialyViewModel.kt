@@ -14,6 +14,7 @@ import pl.rafapp.marko.appendixCreator.domain.model.Material
  */
 class MaterialyViewModel(
     private val dodajUseCase: DodajMaterialUseCase,
+    private val aktualizujUseCase: AktualizujMaterialUseCase,
     private val pobierzUseCase: PobierzMaterialyUseCase,
     private val usunUseCase: UsunMaterialUseCase
 ) {
@@ -60,6 +61,24 @@ class MaterialyViewModel(
                 dodajUseCase(nazwa, jednostka, cena)
                     .onSuccess {
                         successMessage = "Dodano materiał: ${it.nazwa}"
+                        zaladujMaterialy()
+                    }
+                    .onFailure { errorMessage = "Błąd: ${it.message}" }
+            }
+
+            isLoading = false
+        }
+    }
+    fun aktualizujMaterial(id: Long, nazwa: String, jednostka: String, cena: Double) {
+        scope.launch {
+            isLoading = true
+            errorMessage = null
+            successMessage = null
+
+            withContext(Dispatchers.IO) {
+                aktualizujUseCase(id, nazwa, jednostka, cena)
+                    .onSuccess {
+                        successMessage = "Zaktualizowano materiał: ${it.nazwa}"
                         zaladujMaterialy()
                     }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }
