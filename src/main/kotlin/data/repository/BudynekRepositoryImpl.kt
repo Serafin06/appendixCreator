@@ -36,7 +36,7 @@ class BudynekRepositoryImpl : BudynekRepository {
     }
 
     override fun pobierzWszystkie(): List<Budynek> = useSession { session ->
-        session.createQuery("FROM BudynekEntity ORDER BY adres", BudynekEntity::class.java)
+        session.createQuery("FROM BudynekEntity ORDER BY miasto, ulica", BudynekEntity::class.java)
             .resultList
             .map { it.toDomain() }
     }
