@@ -17,6 +17,7 @@ dependencies {
     // Compose Desktop
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
+    implementation(compose.materialIconsExtended)
 
     // Hibernate
     implementation("org.hibernate:hibernate-core:6.6.4.Final")
