@@ -1,0 +1,30 @@
+# Z podaniem ścieżki:
+./gradlew :tools:importExcel -PexcelFile="C:/Users/RafaL/Desktop/materialy.xlsx"
+
+# Lub bez argumentu - program zapyta o ścieżkę:
+./gradlew :tools:importExcel
+```
+
+**Wynik w konsoli:**
+```
+=== Import materiałów z Excel ===
+
+🔌 Łączę z bazą: jdbc:postgresql://...
+📂 Wczytuję plik: materialy.xlsx
+📊 Znaleziono 245 materiałów do importu
+
+=== Podgląd (pierwsze 5) ===
+  aceton | litr | 29.0 zł
+  automat schodowy | szt | 65.0 zł
+  ...
+
+Czy chcesz importować? (T/N): T
+
+⏳ Importuję...
+
+=== Wynik importu ===
+✅ Dodano:    240
+⏭️  Pominięto: 3 (duplikaty)
+❌ Błędy:     2
+
+🎉 Import zakończony!
