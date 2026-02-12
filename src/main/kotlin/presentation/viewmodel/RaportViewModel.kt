@@ -149,7 +149,7 @@ class RaportViewModel(
             val plik = File(folder, nazwaPliku)
 
             withContext(Dispatchers.IO) {
-                eksportujDoExcelUseCase(dane, plik)
+                exportToExcelUseCase(dane, plik)
                     .onSuccess { successMessage = "Zapisano: ${it.absolutePath}" }
                     .onFailure { errorMessage = "Błąd eksportu: ${it.message}" }
             }
