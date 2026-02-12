@@ -9,6 +9,7 @@ import pl.rafapp.marko.appendixCreator.presentation.ui.component.AppScaffold
 import pl.rafapp.marko.appendixCreator.presentation.ui.screen.BudynkiScreen
 import pl.rafapp.marko.appendixCreator.presentation.ui.screen.MaterialyScreen
 import pl.rafapp.marko.appendixCreator.presentation.ui.screen.PraceScreen
+import pl.rafapp.marko.appendixCreator.presentation.ui.screen.RaportScreen
 
 /**
  * Główny komponent aplikacji
@@ -18,10 +19,10 @@ import pl.rafapp.marko.appendixCreator.presentation.ui.screen.PraceScreen
 fun App(container: DependencyContainer) {
     var selectedTab by remember { mutableStateOf(0) }
 
-    // ViewModels - tworzymy raz i zapamiętujemy
     val budynkiViewModel = remember { container.createBudynkiViewModel() }
     val materialyViewModel = remember { container.createMaterialyViewModel() }
     val praceViewModel = remember { container.createPraceViewModel() }
+    val raportViewModel = remember { container.createRaportViewModel() }  // DODAJ!
 
     AppScaffold(
         selectedTab = selectedTab,
@@ -31,6 +32,7 @@ fun App(container: DependencyContainer) {
             0 -> PraceScreen(praceViewModel)
             1 -> BudynkiScreen(budynkiViewModel)
             2 -> MaterialyScreen(materialyViewModel)
+            3 -> RaportScreen(raportViewModel)  // DODAJ!
         }
     }
 }

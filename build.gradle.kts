@@ -34,6 +34,10 @@ dependencies {
     // Dotenv - do ładowania .env
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
 
+    // import to excel i pdf
+    implementation("org.apache.poi:poi:5.3.0")
+    implementation("org.apache.poi:poi-ooxml:5.3.0")
+
     // Testy
     testImplementation(kotlin("test"))
 }

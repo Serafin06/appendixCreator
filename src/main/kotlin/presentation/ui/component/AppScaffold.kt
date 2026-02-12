@@ -17,7 +17,7 @@ fun AppScaffold(
     onTabSelected: (Int) -> Unit,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val tabs = listOf("🔨 Prace", "🏢 Budynki", "📦 Materiały")
+    val tabs = listOf("🔨 Prace", "🏢 Budynki", "📦 Materiały", "📊 Raport")
 
     Scaffold(
         topBar = {

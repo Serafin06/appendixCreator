@@ -24,6 +24,7 @@ object DatabaseConfig {
                     addAnnotatedClass(MaterialEntity::class.java)
                     addAnnotatedClass(PracaEntity::class.java)
                     addAnnotatedClass(PracaMaterialEntity::class.java)
+                    addAnnotatedClass(UstawieniaEntity::class.java)
                 }
                 .buildSessionFactory()
         } catch (ex: Throwable) {

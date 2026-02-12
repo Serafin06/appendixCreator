@@ -10,12 +10,18 @@ import pl.rafapp.marko.appendixCreator.application.usecase.material.UsunMaterial
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.DodajPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.PobierzPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.UsunPraceUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportToExcelUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.ZapiszUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.data.repository.BudynekRepositoryImpl
 import pl.rafapp.marko.appendixCreator.data.repository.MaterialRepositoryImpl
 import pl.rafapp.marko.appendixCreator.data.repository.PracaRepositoryImpl
+import pl.rafapp.marko.appendixCreator.data.repository.UstawieniaRepositoryImpl
 import pl.rafapp.marko.appendixCreator.presentation.viewmodel.BudynkiViewModel
 import pl.rafapp.marko.appendixCreator.presentation.viewmodel.MaterialyViewModel
 import pl.rafapp.marko.appendixCreator.presentation.viewmodel.PraceViewModel
+import pl.rafapp.marko.appendixCreator.presentation.viewmodel.RaportViewModel
 
 /**
  * Dependency Injection Container
@@ -26,6 +32,20 @@ class DependencyContainer {
     private val budynekRepository = BudynekRepositoryImpl()
     private val materialRepository = MaterialRepositoryImpl()
     private val pracaRepository = PracaRepositoryImpl()
+    private val ustawieniaRepository = UstawieniaRepositoryImpl()
+
+    // Use Cases - Ustawienia
+    val pobierzUstawieniaUseCase = PobierzUstawieniaUseCase(ustawieniaRepository)
+    val zapiszUstawieniaUseCase = ZapiszUstawieniaUseCase(ustawieniaRepository)
+
+    // Use Cases - Raport
+    val generujRaportUseCase = GenerujRaportUseCase(
+        budynekRepository,
+        pracaRepository,
+        materialRepository,
+        ustawieniaRepository
+    )
+    val exportToExcelUseCase = ExportToExcelUseCase()
 
     // Use Cases - Budynki
     val dodajBudynekUseCase = DodajBudynekUseCase(budynekRepository)
@@ -63,5 +83,13 @@ class DependencyContainer {
         usunPraceUseCase = usunPraceUseCase,
         pobierzBudynkiUseCase = pobierzBudynkiUseCase,
         pobierzMaterialyUseCase = pobierzMaterialyUseCase
+    )
+
+    fun createRaportViewModel() = RaportViewModel(
+        pobierzBudynkiUseCase = pobierzBudynkiUseCase,
+        pobierzUstawieniaUseCase = pobierzUstawieniaUseCase,
+        zapiszUstawieniaUseCase = zapiszUstawieniaUseCase,
+        generujRaportUseCase = generujRaportUseCase,
+        exportToExcelUseCase = exportToExcelUseCase
     )
 }
