@@ -1,5 +1,5 @@
 # Z podaniem ścieżki:
-./gradlew :tools:importExcel -PexcelFile="C:/Users/RafaL/Desktop/materialy.xlsx"
+./gradlew :tools:importExcel -PexcelFile="C:/Users/marko/Desktop/cennik.xlsx"
 
 # Lub bez argumentu - program zapyta o ścieżkę:
 ./gradlew :tools:importExcel

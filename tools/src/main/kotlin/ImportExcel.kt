@@ -30,10 +30,22 @@ fun main(args: Array<String>) {
     }
 
     // Wczytaj konfigurację bazy z .env (szukaj w folderze nadrzędnym - główny projekt)
-    val dotenv = dotenv {
-        directory = plik.parentFile?.absolutePath
-            ?: findEnvFile()
-        ignoreIfMissing = false
+    val dotenv = try {
+        dotenv {
+            // Sprawdzamy najpierw folder, w którym jesteśmy
+            val currentDir = System.getProperty("user.dir")
+            directory = if (File(currentDir, ".env").exists()) {
+                currentDir
+            } else {
+                // Jeśli nie ma go tutaj, sprawdzamy poziom wyżej (dla folderu tools)
+                ".."
+            }
+            ignoreIfMissing = false
+        }
+    } catch (e: Exception) {
+        println("❌ Krytyczny błąd: Nie znaleziono pliku .env")
+        println("Szukałem w: ${System.getProperty("user.dir")} oraz w folderze nadrzędnym.")
+        return
     }
 
     val host = dotenv["DB_HOST"] ?: error("Brak DB_HOST w .env")
