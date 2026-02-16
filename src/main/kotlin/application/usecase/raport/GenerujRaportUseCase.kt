@@ -27,6 +27,7 @@ data class WierszMaterialuRaportu(
 )
 
 data class DaneRaportu(
+    val numerFaktury: String = "",
     val budynek: Budynek,
     val rok: Int,
     val miesiac: Int,
