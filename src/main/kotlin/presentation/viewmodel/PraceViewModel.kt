@@ -33,7 +33,7 @@ class PraceViewModel(
     var materialy by mutableStateOf<List<Material>>(emptyList())
         private set
 
-    var domyslnyKosztDojazdu by mutableStateOf(25.0)
+    var domyslnyKosztDojazdu by mutableStateOf(0.0)
         private set
 
     var isLoading by mutableStateOf(false)

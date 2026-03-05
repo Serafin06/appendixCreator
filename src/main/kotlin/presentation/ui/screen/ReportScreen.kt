@@ -207,39 +207,35 @@ fun PanelKonfiguracji(viewModel: RaportViewModel) {
             Spacer(Modifier.height(12.dp))
 
             // Stawka roboczogodziny
-            Row(
+            OutlinedTextField(
+                value = viewModel.stawkaRoboczogodziny,
+                onValueChange = { viewModel.ustawStawke(it) },
+                label = { Text("Stawka roboczogodziny (zł/h)") },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = viewModel.kosztDojazdu,
+                onValueChange = { viewModel.ustawKosztDojazdu(it) },
+                label = { Text("Domyślny koszt dojazdu (zł)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick = { viewModel.zapiszStawke() },
+                modifier = Modifier.align(Alignment.End)
             ) {
-                OutlinedTextField(
-                    value = viewModel.stawkaRoboczogodziny,
-                    onValueChange = { viewModel.ustawStawke(it) },
-                    label = { Text("Stawka roboczogodziny (zł/h)") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = viewModel.kosztDojazdu,
-                    onValueChange = { viewModel.ustawKosztDojazdu(it) },
-                    label = { Text("Domyślny koszt dojazdu (zł)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-
-                Button(
-                    onClick = { viewModel.zapiszStawke() },
-                    modifier = Modifier.padding(top = 4.dp)
-                ) {
-                    Icon(Icons.Default.Save, contentDescription = null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Zapisz")
-                }
+                Icon(Icons.Default.Save, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text("Zapisz ustawienia")
             }
 
             Spacer(Modifier.height(16.dp))
