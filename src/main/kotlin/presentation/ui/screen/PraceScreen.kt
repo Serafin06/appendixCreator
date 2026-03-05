@@ -14,6 +14,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import pl.rafapp.marko.appendixCreator.domain.model.*
 import pl.rafapp.marko.appendixCreator.presentation.ui.component.ConfirmDialog
+import pl.rafapp.marko.appendixCreator.presentation.viewmodel.BudynkiViewModel
 import pl.rafapp.marko.appendixCreator.presentation.viewmodel.PraceViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -25,13 +26,14 @@ import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PraceScreen(viewModel: PraceViewModel) {
+fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
     var pokazFormularz by remember { mutableStateOf(false) }
     var pracaDoUsuniecia by remember { mutableStateOf<Praca?>(null) }
 
     if (pokazFormularz) {
         FormularzPracy(
             viewModel = viewModel,
+            budynkiViewModel = budynkiViewModel,
             onClose = { pokazFormularz = false }
         )
     } else {
@@ -166,7 +168,7 @@ fun PracaCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        budynek?.pelnyAdres ?: "Budynek usunięty",
+                        budynek?.displayNazwa() ?: "Budynek usunięty",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
@@ -244,15 +246,18 @@ fun PracaCard(
 @Composable
 fun FormularzPracy(
     viewModel: PraceViewModel,
+    budynkiViewModel: BudynkiViewModel,
     onClose: () -> Unit
 ) {
     var wybranyBudynekId by remember { mutableStateOf<Long?>(null) }
     var data by remember { mutableStateOf(LocalDate.now()) }
     var opis by remember { mutableStateOf("") }
-    var godziny by remember { mutableStateOf("8") }
-    var kosztDojazdu by remember { mutableStateOf("0") }
+    var godziny by remember { mutableStateOf("3") }
+    var czyDojazd by remember { mutableStateOf(false) }
     var vat by remember { mutableStateOf(23) }
     var wybraneMaterialy by remember { mutableStateOf<List<Pair<Long, Double>>>(emptyList()) }
+
+    var pokazDodajBudynekDialog by remember { mutableStateOf(false) }
 
     var pokazDatePicker by remember { mutableStateOf(false) }
     var pokazMaterialDialog by remember { mutableStateOf(false) }
@@ -295,35 +300,59 @@ fun FormularzPracy(
                         Text("1. Wybierz budynek", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(8.dp))
 
+                        var szukaj by remember { mutableStateOf("") }
                         var rozwiniety by remember { mutableStateOf(false) }
+
+                        val przefiltrowane = viewModel.budynki.filter {
+                            it.ulica.contains(szukaj, ignoreCase = true)
+                        }
 
                         ExposedDropdownMenuBox(
                             expanded = rozwiniety,
                             onExpandedChange = { rozwiniety = it }
                         ) {
                             OutlinedTextField(
-                                value = viewModel.budynki.find { it.id == wybranyBudynekId }?.ulica ?: "",
-                                onValueChange = {},
-                                readOnly = true,
+                                value = szukaj,
+                                onValueChange = {
+                                    szukaj = it
+                                    rozwiniety = true
+                                    wybranyBudynekId = null
+                                },
                                 label = { Text("Budynek") },
+                                placeholder = { Text("Wpisz ulicę...") },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = rozwiniety) },
                                 modifier = Modifier.fillMaxWidth().menuAnchor(),
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                                singleLine = true
                             )
 
                             ExposedDropdownMenu(
                                 expanded = rozwiniety,
                                 onDismissRequest = { rozwiniety = false }
                             ) {
-                                viewModel.budynki.forEach { budynek ->
+                                przefiltrowane.forEach { budynek ->
                                     DropdownMenuItem(
-                                        text = { Text(budynek.ulica) },
+                                        text = { Text(budynek.displayNazwa()) },
                                         onClick = {
                                             wybranyBudynekId = budynek.id
+                                            szukaj = budynek.displayNazwa()
                                             rozwiniety = false
                                         }
                                     )
                                 }
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Dodaj nowy budynek", color = MaterialTheme.colorScheme.primary)
+                                        }
+                                    },
+                                    onClick = {
+                                        rozwiniety = false
+                                        pokazDodajBudynekDialog = true
+                                    }
+                                )
                             }
                         }
                     }
@@ -375,14 +404,14 @@ fun FormularzPracy(
                         Spacer(Modifier.height(8.dp))
 
                         // Koszt dojazdu
-                        OutlinedTextField(
-                            value = kosztDojazdu,
-                            onValueChange = { kosztDojazdu = it },
-                            label = { Text("Koszt dojazdu (zł)") },
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true
-                        )
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Dojazd (${String.format("%.2f", viewModel.domyslnyKosztDojazdu)} zł)", style = MaterialTheme.typography.bodyMedium)
+                            Switch(checked = czyDojazd, onCheckedChange = { czyDojazd = it })
+                        }
 
                         Spacer(Modifier.height(8.dp))
 
@@ -472,8 +501,7 @@ fun FormularzPracy(
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = {
-                val godzinyInt = godziny.toIntOrNull() ?: 8
-                val kosztDouble = kosztDojazdu.replace(",", ".").toDoubleOrNull() ?: 0.0
+                val godzinyInt = godziny.toIntOrNull() ?: 3
                 val materialyDoPracy = wybraneMaterialy.map { (materialId, ilosc) ->
                     PracaMaterial(materialId = materialId, ilosc = ilosc)
                 }
@@ -484,7 +512,7 @@ fun FormularzPracy(
                         data = data,
                         opis = opis,
                         godziny = godzinyInt,
-                        kosztDojazdu = kosztDouble,
+                        kosztDojazdu = if (czyDojazd) viewModel.domyslnyKosztDojazdu else 0.0,
                         vat = vat,
                         wybraneMaterialy = materialyDoPracy
                     )
@@ -508,6 +536,17 @@ fun FormularzPracy(
                 pokazMaterialDialog = false
             },
             onDismiss = { pokazMaterialDialog = false }
+        )
+    }
+
+    if (pokazDodajBudynekDialog) {
+        DodajBudynekDialog(
+            onDodaj = { miasto, ulica ->
+                budynkiViewModel.dodajBudynek(miasto, ulica)
+                viewModel.zaladujDane()
+                pokazDodajBudynekDialog = false
+            },
+            onDismiss = { pokazDodajBudynekDialog = false }
         )
     }
 }
@@ -597,6 +636,49 @@ fun DodajMaterialDialog(
             TextButton(onClick = onDismiss) {
                 Text("Anuluj")
             }
+        }
+    )
+}
+
+@Composable
+fun DodajBudynekDialog(
+    onDodaj: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var miasto by remember { mutableStateOf("Katowice") }
+    var ulica by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Dodaj nowy budynek") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = miasto,
+                    onValueChange = { miasto = it },
+                    label = { Text("Miasto") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = ulica,
+                    onValueChange = { ulica = it },
+                    label = { Text("Ulica") },
+                    placeholder = { Text("np. ul. Kwiatowa 5") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onDodaj(miasto, ulica) },
+                enabled = miasto.isNotBlank() && ulica.isNotBlank()
+            ) { Text("Dodaj") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Anuluj") }
         }
     )
 }

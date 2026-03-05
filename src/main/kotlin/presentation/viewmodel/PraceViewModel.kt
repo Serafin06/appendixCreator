@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynkiUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.material.PobierzMaterialyUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.*
+import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.domain.model.*
 import java.time.LocalDate
 
@@ -20,7 +21,8 @@ class PraceViewModel(
     private val pobierzPraceUseCase: PobierzPraceUseCase,
     private val usunPraceUseCase: UsunPraceUseCase,
     private val pobierzBudynkiUseCase: PobierzBudynkiUseCase,
-    private val pobierzMaterialyUseCase: PobierzMaterialyUseCase
+    private val pobierzMaterialyUseCase: PobierzMaterialyUseCase,
+    private val pobierzUstawieniaUseCase: PobierzUstawieniaUseCase
 ) {
     var prace by mutableStateOf<List<Praca>>(emptyList())
         private set
@@ -29,6 +31,9 @@ class PraceViewModel(
         private set
 
     var materialy by mutableStateOf<List<Material>>(emptyList())
+        private set
+
+    var domyslnyKosztDojazdu by mutableStateOf(25.0)
         private set
 
     var isLoading by mutableStateOf(false)
@@ -63,6 +68,9 @@ class PraceViewModel(
                 pobierzMaterialyUseCase()
                     .onSuccess { materialy = it }
                     .onFailure { errorMessage = "Błąd ładowania materiałów: ${it.message}" }
+
+                pobierzUstawieniaUseCase()
+                    .onSuccess { domyslnyKosztDojazdu = it.kosztDojazdu }
             }
 
             isLoading = false

@@ -54,6 +54,9 @@ class RaportViewModel(
     var successMessage by mutableStateOf<String?>(null)
         private set
 
+    var kosztDojazdu by mutableStateOf("25.00")
+        private set
+
     private val scope = CoroutineScope(Dispatchers.IO)
 
     init {
@@ -69,7 +72,10 @@ class RaportViewModel(
                     .onSuccess { budynki = it }
 
                 pobierzUstawieniaUseCase()
-                    .onSuccess { stawkaRoboczogodziny = String.format("%.2f", it.stawkaRoboczogodziny) }
+                    .onSuccess {
+                        stawkaRoboczogodziny = String.format("%.2f", it.stawkaRoboczogodziny)
+                        kosztDojazdu = String.format("%.2f", it.kosztDojazdu)
+                    }
             }
 
             isLoading = false
@@ -99,13 +105,20 @@ class RaportViewModel(
         clearMessages()
     }
 
+    fun ustawKosztDojazdu(koszt: String) {
+        kosztDojazdu = koszt
+        clearMessages()
+    }
+
     fun zapiszStawke() {
         val stawkaDouble = stawkaRoboczogodziny.replace(",", ".").toDoubleOrNull()
             ?: return
 
+        val dojazdDouble = kosztDojazdu.replace(",", ".").toDoubleOrNull() ?: return
+
         scope.launch {
             withContext(Dispatchers.IO) {
-                zapiszUstawieniaUseCase(stawkaDouble)
+                zapiszUstawieniaUseCase(stawkaDouble, dojazdDouble)
                     .onSuccess { successMessage = "Stawka zapisana: ${String.format("%.2f", stawkaDouble)} zł/h" }
                     .onFailure { errorMessage = "Błąd zapisu stawki: ${it.message}" }
             }

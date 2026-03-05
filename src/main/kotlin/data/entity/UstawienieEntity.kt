@@ -10,14 +10,21 @@ data class UstawieniaEntity(
     val id: Int = 1,
 
     @Column(name = "stawka_roboczogodziny", nullable = false)
-    val stawkaRoboczogodziny: Double = 50.0
+    val stawkaRoboczogodziny: Double = 50.0,
+
+    @Column(name = "koszt_dojazdu", nullable = false)
+    val kosztDojazdu: Double = 25.0
 ) {
-    fun toDomain() = Ustawienia(stawkaRoboczogodziny = stawkaRoboczogodziny)
+    fun toDomain() = Ustawienia(
+        stawkaRoboczogodziny = stawkaRoboczogodziny,
+        kosztDojazdu = kosztDojazdu
+    )
 
     companion object {
         fun fromDomain(ustawienia: Ustawienia) = UstawieniaEntity(
             id = 1,
-            stawkaRoboczogodziny = ustawienia.stawkaRoboczogodziny
+            stawkaRoboczogodziny = ustawienia.stawkaRoboczogodziny,
+            kosztDojazdu = ustawienia.kosztDojazdu
         )
     }
 }

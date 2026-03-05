@@ -12,3 +12,6 @@ data class Budynek(
     val pelnyAdres: String
         get() = "$ulica, $miasto"
 }
+fun Budynek.displayNazwa(): String =
+    if (miasto.equals("Katowice", ignoreCase = true)) ulica
+    else "$ulica - $miasto"

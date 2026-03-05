@@ -5,5 +5,6 @@ package pl.rafapp.marko.appendixCreator.domain.model
  */
 
 data class Ustawienia(
-    val stawkaRoboczogodziny: Double = 50.0
+    val stawkaRoboczogodziny: Double = 50.0,
+    val kosztDojazdu: Double = 25.0
 )

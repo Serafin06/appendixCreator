@@ -221,6 +221,17 @@ fun PanelKonfiguracji(viewModel: RaportViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
 
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = viewModel.kosztDojazdu,
+                    onValueChange = { viewModel.ustawKosztDojazdu(it) },
+                    label = { Text("Domyślny koszt dojazdu (zł)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+
                 Button(
                     onClick = { viewModel.zapiszStawke() },
                     modifier = Modifier.padding(top = 4.dp)

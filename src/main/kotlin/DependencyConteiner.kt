@@ -82,7 +82,8 @@ class DependencyContainer {
         pobierzPraceUseCase = pobierzPraceUseCase,
         usunPraceUseCase = usunPraceUseCase,
         pobierzBudynkiUseCase = pobierzBudynkiUseCase,
-        pobierzMaterialyUseCase = pobierzMaterialyUseCase
+        pobierzMaterialyUseCase = pobierzMaterialyUseCase,
+        pobierzUstawieniaUseCase = pobierzUstawieniaUseCase
     )
 
     fun createRaportViewModel() = RaportViewModel(
