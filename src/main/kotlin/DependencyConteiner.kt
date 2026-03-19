@@ -11,7 +11,9 @@ import pl.rafapp.marko.appendixCreator.application.usecase.praca.DodajPraceUseCa
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.PobierzPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.UsunPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportToExcelUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportWszystkichBudynkowUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportZbiorczyUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.ZapiszUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.data.repository.BudynekRepositoryImpl
@@ -63,6 +65,16 @@ class DependencyContainer {
     val pobierzPraceUseCase = PobierzPraceUseCase(pracaRepository)
     val usunPraceUseCase = UsunPraceUseCase(pracaRepository)
 
+    val generujRaportZbiorczyUseCase = GenerujRaportZbiorczyUseCase(
+        pobierzBudynkiUseCase,
+        generujRaportUseCase
+    )
+    val exportWszystkichBudynkowUseCase = ExportWszystkichBudynkowUseCase(
+        pobierzBudynkiUseCase,
+        generujRaportUseCase,
+        exportToExcelUseCase
+    )
+
     // ViewModels
     fun createBudynkiViewModel() = BudynkiViewModel(
         dodajUseCase = dodajBudynekUseCase,
@@ -91,6 +103,8 @@ class DependencyContainer {
         pobierzUstawieniaUseCase = pobierzUstawieniaUseCase,
         zapiszUstawieniaUseCase = zapiszUstawieniaUseCase,
         generujRaportUseCase = generujRaportUseCase,
-        exportToExcelUseCase = exportToExcelUseCase
+        generujRaportZbiorczyUseCase = generujRaportZbiorczyUseCase,
+        exportToExcelUseCase = exportToExcelUseCase,
+        exportWszystkichBudynkowUseCase = exportWszystkichBudynkowUseCase
     )
 }

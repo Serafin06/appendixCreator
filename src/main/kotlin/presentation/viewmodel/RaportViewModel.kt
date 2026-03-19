@@ -7,8 +7,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynkiUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.DaneRaportu
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.DaneRaportuZbiorczego
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportToExcelUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportWszystkichBudynkowUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportZbiorczyUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.ZapiszUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.domain.model.Budynek
@@ -24,9 +27,13 @@ class RaportViewModel(
     private val pobierzBudynkiUseCase: PobierzBudynkiUseCase,
     private val pobierzUstawieniaUseCase: PobierzUstawieniaUseCase,
     private val zapiszUstawieniaUseCase: ZapiszUstawieniaUseCase,
+    private val generujRaportZbiorczyUseCase: GenerujRaportZbiorczyUseCase,
     private val generujRaportUseCase: GenerujRaportUseCase,
-    private val exportToExcelUseCase: ExportToExcelUseCase
+    private val exportToExcelUseCase: ExportToExcelUseCase,
+    private val exportWszystkichBudynkowUseCase: ExportWszystkichBudynkowUseCase
 ) {
+    enum class TypRaportu { POJEDYNCZY_BUDYNEK, ZBIORCZY_MIESIAC, WSZYSTKIE_BUDYNKI }
+
     var budynki by mutableStateOf<List<Budynek>>(emptyList())
         private set
 
@@ -55,6 +62,12 @@ class RaportViewModel(
         private set
 
     var kosztDojazdu by mutableStateOf("25.00")
+        private set
+
+    var typRaportu by mutableStateOf(TypRaportu.POJEDYNCZY_BUDYNEK)
+        private set
+
+    var daneRaportuZbiorczego by mutableStateOf<DaneRaportuZbiorczego?>(null)
         private set
 
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -125,52 +138,87 @@ class RaportViewModel(
         }
     }
 
-    fun generujPodglad() {
-        val budynekId = wybranyBudynekId ?: run {
-            errorMessage = "Wybierz budynek"
-            return
-        }
+    fun ustawTypRaportu(typ: TypRaportu) {
+        typRaportu = typ
+        daneRaportu = null
+        daneRaportuZbiorczego = null
+        clearMessages()
+    }
 
+    fun generujPodglad() {
+        when (typRaportu) {
+            TypRaportu.POJEDYNCZY_BUDYNEK -> generujPodgladJednego()
+            TypRaportu.ZBIORCZY_MIESIAC,
+            TypRaportu.WSZYSTKIE_BUDYNKI -> generujPodgladZbiorczy()
+        }
+    }
+
+    private fun generujPodgladJednego() {
+        val budynekId = wybranyBudynekId ?: run { errorMessage = "Wybierz budynek"; return }
         scope.launch {
             isLoading = true
             errorMessage = null
             daneRaportu = null
-
             withContext(Dispatchers.IO) {
                 generujRaportUseCase(budynekId, wybranyRok, wybranyMiesiac)
                     .onSuccess { daneRaportu = it }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }
             }
+            isLoading = false
+        }
+    }
 
+    private fun generujPodgladZbiorczy() {
+        scope.launch {
+            isLoading = true
+            errorMessage = null
+            daneRaportuZbiorczego = null
+            withContext(Dispatchers.IO) {
+                generujRaportZbiorczyUseCase(wybranyRok, wybranyMiesiac)
+                    .onSuccess { daneRaportuZbiorczego = it }
+                    .onFailure { errorMessage = "Błąd: ${it.message}" }
+            }
             isLoading = false
         }
     }
 
     fun exportExcel(folder: File) {
-        val dane = daneRaportu ?: run {
-            errorMessage = "Najpierw wygeneruj podgląd"
-            return
+        when (typRaportu) {
+            TypRaportu.POJEDYNCZY_BUDYNEK -> exportJednego(folder)
+            TypRaportu.ZBIORCZY_MIESIAC -> { /* TODO: export zbiorczy do jednego pliku */ }
+            TypRaportu.WSZYSTKIE_BUDYNKI -> exportWszystkich(folder)
         }
+    }
 
+    private fun exportJednego(folder: File) {
+        val dane = daneRaportu ?: run { errorMessage = "Najpierw wygeneruj podgląd"; return }
         scope.launch {
             isLoading = true
             errorMessage = null
             successMessage = null
-
-            val nazwaPliku = "Raport_${dane.budynek.miasto}_${dane.miesiac}_${dane.rok}.xlsx"
-                .replace(" ", "_")
-            val plik = File(folder, nazwaPliku)
-
+            val nazwaPliku = "Raport_${dane.budynek.miasto}_${dane.miesiac}_${dane.rok}.xlsx".replace(" ", "_")
             withContext(Dispatchers.IO) {
-                exportToExcelUseCase(dane, plik)
+                exportToExcelUseCase(dane, File(folder, nazwaPliku))
                     .onSuccess { successMessage = "Zapisano: ${it.absolutePath}" }
                     .onFailure { errorMessage = "Błąd eksportu: ${it.message}" }
             }
-
             isLoading = false
         }
     }
 
+    private fun exportWszystkich(folder: File) {
+        scope.launch {
+            isLoading = true
+            errorMessage = null
+            successMessage = null
+            withContext(Dispatchers.IO) {
+                exportWszystkichBudynkowUseCase(folder, wybranyRok, wybranyMiesiac)
+                    .onSuccess { successMessage = "Zapisano ${it.size} plików w: ${folder.absolutePath}" }
+                    .onFailure { errorMessage = "Błąd eksportu: ${it.message}" }
+            }
+            isLoading = false
+        }
+    }
     fun clearMessages() {
         errorMessage = null
         successMessage = null
