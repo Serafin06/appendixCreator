@@ -64,6 +64,17 @@ class PracaRepositoryImpl : PracaRepository {
             .map { it.toDomain() }
     }
 
+    override fun aktualizuj(praca: Praca): Praca = useSession { session ->
+        val existing = session.get(PracaEntity::class.java, praca.id)
+            ?: throw IllegalArgumentException("Praca o ID ${praca.id} nie istnieje")
+        existing.materialy.clear()
+        session.flush()
+        val updated = PracaEntity.fromDomain(praca)
+        val merged = session.merge(updated)
+        session.flush()
+        merged.toDomain()
+    }
+
     override fun usun(id: Long) = useSession { session ->
         val entity = session.get(PracaEntity::class.java, id)
             ?: throw IllegalArgumentException("Praca o ID $id nie istnieje")

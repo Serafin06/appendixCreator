@@ -29,12 +29,17 @@ import java.time.format.DateTimeFormatter
 fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
     var pokazFormularz by remember { mutableStateOf(false) }
     var pracaDoUsuniecia by remember { mutableStateOf<Praca?>(null) }
+    var pracaDoEdycji by remember { mutableStateOf<Praca?>(null) }
 
-    if (pokazFormularz) {
+    if (pokazFormularz || pracaDoEdycji != null) {
         FormularzPracy(
             viewModel = viewModel,
             budynkiViewModel = budynkiViewModel,
-            onClose = { pokazFormularz = false }
+            pracaDoEdycji = pracaDoEdycji,
+            onClose = {
+                pokazFormularz = false
+                pracaDoEdycji = null
+            }
         )
     } else {
         Column(
@@ -125,7 +130,8 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
                             praca = praca,
                             budynek = viewModel.budynki.find { it.id == praca.budynekId },
                             materialy = viewModel.materialy,
-                            onDelete = { pracaDoUsuniecia = praca }
+                            onDelete = { pracaDoUsuniecia = praca },
+                            onEdit = { pracaDoEdycji = praca }
                         )
                     }
                 }
@@ -152,7 +158,8 @@ fun PracaCard(
     praca: Praca,
     budynek: Budynek?,
     materialy: List<Material>,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit
 ) {
     val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
@@ -181,6 +188,10 @@ fun PracaCard(
                         praca.opis,
                         style = MaterialTheme.typography.bodyMedium
                     )
+                }
+
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edytuj", tint = MaterialTheme.colorScheme.primary)
                 }
 
                 IconButton(onClick = onDelete) {
@@ -231,7 +242,12 @@ fun PracaCard(
                     val material = materialy.find { it.id == pracaMaterial.materialId }
                     if (material != null) {
                         Text(
-                            "• ${material.nazwa}: ${pracaMaterial.ilosc} ${material.jednostka} × ${String.format("%.2f", material.cenaZaJednostke)} zł = ${String.format("%.2f", pracaMaterial.ilosc * material.cenaZaJednostke)} zł",
+                            "• ${material.nazwa}: ${pracaMaterial.ilosc} ${material.jednostka} × ${
+                                String.format(
+                                    "%.2f",
+                                    material.cenaZaJednostke
+                                )
+                            } zł = ${String.format("%.2f", pracaMaterial.ilosc * material.cenaZaJednostke)} zł",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(start = 8.dp, top = 2.dp)
                         )
@@ -247,15 +263,19 @@ fun PracaCard(
 fun FormularzPracy(
     viewModel: PraceViewModel,
     budynkiViewModel: BudynkiViewModel,
+    pracaDoEdycji: Praca? = null,
     onClose: () -> Unit
 ) {
-    var wybranyBudynekId by remember { mutableStateOf<Long?>(null) }
-    var data by remember { mutableStateOf(LocalDate.now()) }
-    var opis by remember { mutableStateOf("") }
-    var godziny by remember { mutableStateOf("3") }
-    var czyDojazd by remember { mutableStateOf(false) }
-    var vat by remember { mutableStateOf(23) }
-    var wybraneMaterialy by remember { mutableStateOf<List<Pair<Long, Double>>>(emptyList()) }
+    var wybranyBudynekId by remember { mutableStateOf(pracaDoEdycji?.budynekId) }
+    var data by remember { mutableStateOf(pracaDoEdycji?.data ?: LocalDate.now()) }
+    var opis by remember { mutableStateOf(pracaDoEdycji?.opis ?: "") }
+    var godziny by remember { mutableStateOf(pracaDoEdycji?.roboczogodziny?.toString() ?: "3") }
+    var czyDojazd by remember { mutableStateOf((pracaDoEdycji?.kosztDojazdu ?: 0.0) > 0) }
+    var vat by remember { mutableStateOf(pracaDoEdycji?.vat ?: 23) }
+    var wybraneMaterialy by remember {
+        mutableStateOf(pracaDoEdycji?.materialy?.map { it.materialId to it.ilosc } ?: emptyList<Pair<Long, Double>>())
+    }
+    val isEditing = pracaDoEdycji != null
 
     var pokazDodajBudynekDialog by remember { mutableStateOf(false) }
 
@@ -280,7 +300,7 @@ fun FormularzPracy(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Nowa praca",
+                if (isEditing) "Edytuj pracę" else "Nowa praca",
                 style = MaterialTheme.typography.headlineSmall
             )
 
@@ -300,7 +320,9 @@ fun FormularzPracy(
                         Text("1. Wybierz budynek", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(8.dp))
 
-                        var szukaj by remember { mutableStateOf("") }
+                        var szukaj by remember {
+                            mutableStateOf(viewModel.budynki.find { it.id == wybranyBudynekId }?.displayNazwa() ?: "")
+                        }
                         var rozwiniety by remember { mutableStateOf(false) }
 
                         val przefiltrowane = viewModel.budynki.filter {
@@ -343,7 +365,11 @@ fun FormularzPracy(
                                 DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                            Icon(
+                                                Icons.Default.Add,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
                                             Spacer(Modifier.width(8.dp))
                                             Text("Dodaj nowy budynek", color = MaterialTheme.colorScheme.primary)
                                         }
@@ -409,7 +435,10 @@ fun FormularzPracy(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Dojazd (${String.format("%.2f", viewModel.domyslnyKosztDojazdu)} zł)", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Dojazd (${String.format("%.2f", viewModel.domyslnyKosztDojazdu)} zł)",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                             Switch(checked = czyDojazd, onCheckedChange = { czyDojazd = it })
                         }
 
@@ -474,7 +503,12 @@ fun FormularzPracy(
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(material.nazwa, style = MaterialTheme.typography.bodyMedium)
                                             Text(
-                                                "$ilosc ${material.jednostka} × ${String.format("%.2f", material.cenaZaJednostke)} zł = ${String.format("%.2f", ilosc * material.cenaZaJednostke)} zł",
+                                                "$ilosc ${material.jednostka} × ${
+                                                    String.format(
+                                                        "%.2f",
+                                                        material.cenaZaJednostke
+                                                    )
+                                                } zł = ${String.format("%.2f", ilosc * material.cenaZaJednostke)} zł",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
@@ -485,7 +519,11 @@ fun FormularzPracy(
                                                 wybraneMaterialy = wybraneMaterialy.filter { it.first != materialId }
                                             }
                                         ) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Usuń", tint = MaterialTheme.colorScheme.error)
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Usuń",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
                                         }
                                     }
                                     Divider()
@@ -505,9 +543,19 @@ fun FormularzPracy(
                 val materialyDoPracy = wybraneMaterialy.map { (materialId, ilosc) ->
                     PracaMaterial(materialId = materialId, ilosc = ilosc)
                 }
-
                 if (wybranyBudynekId != null) {
-                    viewModel.dodajPrace(
+                    val praca = Praca(
+                        id = pracaDoEdycji?.id ?: 0,
+                        budynekId = wybranyBudynekId!!,
+                        data = data,
+                        opis = opis,
+                        roboczogodziny = godzinyInt,
+                        kosztDojazdu = if (czyDojazd) viewModel.domyslnyKosztDojazdu else 0.0,
+                        vat = vat,
+                        materialy = materialyDoPracy
+                    )
+                    if (isEditing) viewModel.edytujPrace(praca)
+                    else viewModel.dodajPrace(
                         budynekId = wybranyBudynekId!!,
                         data = data,
                         opis = opis,
@@ -523,7 +571,7 @@ fun FormularzPracy(
         ) {
             Icon(Icons.Default.Check, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Zapisz pracę")
+            Text(if (isEditing) "Zapisz zmiany" else "Zapisz pracę")
         }
     }
 

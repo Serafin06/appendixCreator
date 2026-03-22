@@ -7,5 +7,6 @@ interface PracaRepository {
     fun pobierzWszystkie(): List<Praca>
     fun pobierzPoId(id: Long): Praca?
     fun pobierzDlaBudynku(budynekId: Long): List<Praca>
+    fun aktualizuj(praca: Praca): Praca
     fun usun(id: Long)
 }

@@ -20,6 +20,7 @@ class PraceViewModel(
     private val dodajPraceUseCase: DodajPraceUseCase,
     private val pobierzPraceUseCase: PobierzPraceUseCase,
     private val usunPraceUseCase: UsunPraceUseCase,
+    private val edytujPraceUseCase: EdytujPraceUseCase,
     private val pobierzBudynkiUseCase: PobierzBudynkiUseCase,
     private val pobierzMaterialyUseCase: PobierzMaterialyUseCase,
     private val pobierzUstawieniaUseCase: PobierzUstawieniaUseCase
@@ -105,6 +106,25 @@ class PraceViewModel(
                 dodajPraceUseCase(praca)
                     .onSuccess {
                         successMessage = "Dodano pracę"
+                        zaladujDane()
+                    }
+                    .onFailure { errorMessage = "Błąd: ${it.message}" }
+            }
+
+            isLoading = false
+        }
+    }
+
+    fun edytujPrace(praca: Praca) {
+        scope.launch {
+            isLoading = true
+            errorMessage = null
+            successMessage = null
+
+            withContext(Dispatchers.IO) {
+                edytujPraceUseCase(praca)
+                    .onSuccess {
+                        successMessage = "Zapisano zmiany"
                         zaladujDane()
                     }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }

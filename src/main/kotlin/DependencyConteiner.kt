@@ -8,6 +8,7 @@ import pl.rafapp.marko.appendixCreator.application.usecase.material.DodajMateria
 import pl.rafapp.marko.appendixCreator.application.usecase.material.PobierzMaterialyUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.material.UsunMaterialUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.DodajPraceUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.praca.EdytujPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.PobierzPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.UsunPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportToExcelUseCase
@@ -64,6 +65,7 @@ class DependencyContainer {
     val dodajPraceUseCase = DodajPraceUseCase(pracaRepository)
     val pobierzPraceUseCase = PobierzPraceUseCase(pracaRepository)
     val usunPraceUseCase = UsunPraceUseCase(pracaRepository)
+    val edytujPraceUseCase = EdytujPraceUseCase(pracaRepository)
 
     val generujRaportZbiorczyUseCase = GenerujRaportZbiorczyUseCase(
         pobierzBudynkiUseCase,
@@ -93,6 +95,7 @@ class DependencyContainer {
         dodajPraceUseCase = dodajPraceUseCase,
         pobierzPraceUseCase = pobierzPraceUseCase,
         usunPraceUseCase = usunPraceUseCase,
+        edytujPraceUseCase = edytujPraceUseCase,
         pobierzBudynkiUseCase = pobierzBudynkiUseCase,
         pobierzMaterialyUseCase = pobierzMaterialyUseCase,
         pobierzUstawieniaUseCase = pobierzUstawieniaUseCase
