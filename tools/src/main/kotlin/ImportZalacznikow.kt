@@ -63,29 +63,55 @@ fun main(args: Array<String>) {
     }
     println()
 
-    print("Czy chcesz importować? (T/N): ")
-    if (readLine()?.trim()?.uppercase() != "T") { println("❌ Anulowano"); return }
+    // Wykryj miesiąc/rok z danych
+    val daty = budynki.flatMap { b -> b.prace.map { it.data } }
+    val rok = daty.minOf { it.year }
+    val miesiac = daty.minOf { it.monthValue }
+    val nazwyMiesiecy = listOf("", "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
+        "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień")
+    println("📅 Wykryto okres: ${nazwyMiesiecy[miesiac]} $rok")
+    println()
+
+    // Dialog wyboru trybu importu
+    val opcje = arrayOf("Wyczyść ${ nazwyMiesiecy[miesiac] } $rok i importuj", "Doimportuj (ryzyko duplikatów)", "Anuluj")
+    val wybor = javax.swing.JOptionPane.showOptionDialog(
+        null,
+        "Wykryto prace z okresu: ${nazwyMiesiecy[miesiac]} $rok\n\n" +
+                "Co chcesz zrobić z istniejącymi pracami z tego okresu w bazie?",
+        "Zarządzanie duplikatami — ${ nazwyMiesiecy[miesiac] } $rok",
+        javax.swing.JOptionPane.DEFAULT_OPTION,
+        javax.swing.JOptionPane.QUESTION_MESSAGE,
+        null,
+        opcje,
+        opcje[0]
+    )
+
+    val czyscPrzedImportem = when (wybor) {
+        0 -> { println("🗑️  Tryb: wyczyść i importuj od nowa"); true }
+        1 -> { println("➕ Tryb: doimportuj bez czyszczenia"); false }
+        else -> { println("❌ Anulowano"); return }
+    }
 
     println()
     println("⏳ Importuję...")
 
-    val result = importujZalacznikDoBazy(jdbcUrl, user, password, budynki)
+    val result = importujZalacznikDoBazy(jdbcUrl, user, password, budynki, rok, miesiac, czyscPrzedImportem)
 
     println()
     println("=== Wynik ===")
-    println("✅ Budynki dodane:    ${result.budynkiDodane}")
-    println("⏭️  Budynki istniały:  ${result.budynkiIstniejace}")
-    println("✅ Prace dodane:      ${result.praceDodane}")
-    println("✅ Materiały dodane:  ${result.materialyDodane}")
+    if (czyscPrzedImportem) println("🗑️  Usunięto prace: ${result.praceUsuniete}")
+    println("✅ Budynki dodane:     ${result.budynkiDodane}")
+    println("⏭️  Budynki istniały:   ${result.budynkiIstniejace}")
+    println("✅ Prace dodane:       ${result.praceDodane}")
+    println("✅ Materiały dodane:   ${result.materialyDodane}")
     println("⚠️  Materiały nieznane: ${result.materialyNieznane.size}")
-    println("❌ Błędy:             ${result.bledy.size}")
+    println("❌ Błędy:              ${result.bledy.size}")
 
     if (result.materialyNieznane.isNotEmpty()) {
         println()
-        println("=== Nieznane materiały (nie znaleziono w tabeli materialy) ===")
+        println("=== Nieznane materiały (brak w tabeli materialy) ===")
         result.materialyNieznane.forEach { println("  • $it") }
     }
-
     if (result.bledy.isNotEmpty()) {
         println()
         println("=== Błędy ===")
@@ -98,10 +124,7 @@ fun main(args: Array<String>) {
 
 // === Modele ===
 
-data class MaterialExcel(
-    val nazwa: String,
-    val ilosc: Double
-)
+data class MaterialExcel(val nazwa: String, val ilosc: Double)
 
 data class PracaExcel(
     val data: LocalDate,
@@ -112,12 +135,10 @@ data class PracaExcel(
     val materialy: List<MaterialExcel>
 )
 
-data class BudynekExcel(
-    val ulica: String,
-    val prace: List<PracaExcel>
-)
+data class BudynekExcel(val ulica: String, val prace: List<PracaExcel>)
 
 data class ZalacznikImportResult(
+    val praceUsuniete: Int,
     val budynkiDodane: Int,
     val budynkiIstniejace: Int,
     val praceDodane: Int,
@@ -152,7 +173,6 @@ fun wczytajZalaczniki(plik: File): List<BudynekExcel> {
 }
 
 fun parsujPraceZMaterialami(wiersze: List<Row>, sheetName: String): List<PracaExcel> {
-    // Grupuj wiersze po LP
     val grupy = mutableListOf<List<Row>>()
     var aktualna = mutableListOf<Row>()
 
@@ -176,7 +196,6 @@ fun parsujPraceZMaterialami(wiersze: List<Row>, sheetName: String): List<PracaEx
             println("  [WARN] $sheetName LP=${pierwsza.getCell(0)?.numericCellValue?.toInt()}: brak daty, pomijam")
             continue
         }
-
         val opis = pobierzKomorke(pierwsza.getCell(2))?.trim() ?: run {
             println("  [WARN] $sheetName LP=${pierwsza.getCell(0)?.numericCellValue?.toInt()}: brak opisu, pomijam")
             continue
@@ -188,30 +207,22 @@ fun parsujPraceZMaterialami(wiersze: List<Row>, sheetName: String): List<PracaEx
         val materialy = mutableListOf<MaterialExcel>()
 
         for (wiersz in grupa) {
-            // roboczogodziny - col 3
             wiersz.getCell(3)?.takeIf { it.cellType == CellType.NUMERIC }?.let {
                 roboczogodziny = it.numericCellValue.toInt()
             }
-
-            // materiał - col 5 (nazwa), col 6 (ilość)
             val nazwaM = pobierzKomorke(wiersz.getCell(5))
             val ilosc = wiersz.getCell(6)?.takeIf { it.cellType == CellType.NUMERIC }?.numericCellValue
             if (!nazwaM.isNullOrBlank() && ilosc != null && ilosc > 0) {
                 materialy.add(MaterialExcel(nazwa = nazwaM.trim(), ilosc = ilosc))
             }
-
-            // dojazd - col 12 gdy col 10 == "dojazd"
             if (pobierzKomorke(wiersz.getCell(10)) == "dojazd") {
                 wiersz.getCell(12)?.takeIf { it.cellType == CellType.NUMERIC }?.let {
                     kosztDojazdu = it.numericCellValue
                 }
             }
-
-            // VAT - col 14 lub 15 jako 0.08 / 0.23
             for (vatCol in listOf(14, 15)) {
                 wiersz.getCell(vatCol)?.takeIf { it.cellType == CellType.NUMERIC }?.let {
-                    val v = it.numericCellValue
-                    val vInt = Math.round(v * 100).toInt()
+                    val vInt = Math.round(it.numericCellValue * 100).toInt()
                     if (vInt in listOf(8, 23)) vat = vInt
                 }
             }
@@ -229,8 +240,12 @@ fun importujZalacznikDoBazy(
     jdbcUrl: String,
     user: String,
     password: String,
-    budynki: List<BudynekExcel>
+    budynki: List<BudynekExcel>,
+    rok: Int,
+    miesiac: Int,
+    czyscPrzedImportem: Boolean
 ): ZalacznikImportResult {
+    var praceUsuniete = 0
     var budynkiDodane = 0
     var budynkiIstniejace = 0
     var praceDodane = 0
@@ -240,7 +255,19 @@ fun importujZalacznikDoBazy(
     val miasto = "Katowice"
 
     DriverManager.getConnection(jdbcUrl, user, password).use { conn ->
-        // Załaduj słownik materiałów: nazwa lowercase -> id
+        // Opcjonalne czyszczenie - usuwa prace (cascade usuwa też praca_material)
+        if (czyscPrzedImportem) {
+            conn.prepareStatement(
+                "DELETE FROM praca WHERE EXTRACT(YEAR FROM data) = ? AND EXTRACT(MONTH FROM data) = ?"
+            ).use { stmt ->
+                stmt.setInt(1, rok)
+                stmt.setInt(2, miesiac)
+                praceUsuniete = stmt.executeUpdate()
+                println("🗑️  Usunięto $praceUsuniete prac z $miesiac/$rok")
+            }
+        }
+
+        // Słownik materiałów: nazwa lowercase -> id
         val slownikMaterialow = mutableMapOf<String, Long>()
         conn.createStatement().use { stmt ->
             val rs = stmt.executeQuery("SELECT id, LOWER(nazwa) FROM materialy")
@@ -254,9 +281,7 @@ fun importujZalacznikDoBazy(
             INSERT INTO praca (data, opis, roboczogodziny, koszt_dojazdu, vat, budynek_id)
             VALUES (?, ?, ?, ?, ?, ?) RETURNING id
         """.trimIndent()
-        val sqlInsertPracaMaterial = """
-            INSERT INTO praca_material (ilosc, material_id, praca_id) VALUES (?, ?, ?)
-        """.trimIndent()
+        val sqlInsertPracaMaterial = "INSERT INTO praca_material (ilosc, material_id, praca_id) VALUES (?, ?, ?)"
 
         for (budynek in budynki) {
             try {
@@ -279,7 +304,6 @@ fun importujZalacznikDoBazy(
 
                 for (praca in budynek.prace) {
                     try {
-                        // Wstaw pracę i pobierz jej id
                         val pracaId: Long = conn.prepareStatement(sqlInsertPraca).use { stmt ->
                             stmt.setDate(1, Date.valueOf(praca.data))
                             stmt.setString(2, praca.opis)
@@ -292,7 +316,6 @@ fun importujZalacznikDoBazy(
                         }
                         praceDodane++
 
-                        // Wstaw materiały pracy
                         conn.prepareStatement(sqlInsertPracaMaterial).use { stmt ->
                             for (mat in praca.materialy) {
                                 val materialId = slownikMaterialow[mat.nazwa.lowercase()]
@@ -318,7 +341,7 @@ fun importujZalacznikDoBazy(
         }
     }
 
-    return ZalacznikImportResult(budynkiDodane, budynkiIstniejace, praceDodane, materialyDodane, materialyNieznane, bledy)
+    return ZalacznikImportResult(praceUsuniete, budynkiDodane, budynkiIstniejace, praceDodane, materialyDodane, materialyNieznane, bledy)
 }
 
 // === Helpers ===
