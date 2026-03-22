@@ -1,0 +1,348 @@
+import io.github.cdimascio.dotenv.dotenv
+import org.apache.poi.ss.usermodel.*
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import java.io.File
+import java.sql.Date
+import java.sql.DriverManager
+import java.time.LocalDate
+
+fun main(args: Array<String>) {
+    println("=== Import załączników z Excel ===")
+    println()
+
+    val sciezkaPliku = when {
+        args.isNotEmpty() -> args[0]
+        else -> {
+            val chooser = javax.swing.JFileChooser().apply {
+                dialogTitle = "Wybierz plik Excel z załącznikami"
+                fileFilter = javax.swing.filechooser.FileNameExtensionFilter("Pliki Excel (*.xlsx)", "xlsx")
+            }
+            if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                chooser.selectedFile.absolutePath
+            } else {
+                println("❌ Nie wybrano pliku"); return
+            }
+        }
+    }
+
+    val plik = File(sciezkaPliku)
+    if (!plik.exists()) { println("❌ Plik nie istnieje: $sciezkaPliku"); return }
+
+    val dotenv = try {
+        dotenv {
+            val currentDir = System.getProperty("user.dir")
+            directory = if (File(currentDir, ".env").exists()) currentDir else ".."
+            ignoreIfMissing = false
+        }
+    } catch (e: Exception) {
+        println("❌ Nie znaleziono pliku .env"); return
+    }
+
+    val jdbcUrl = "jdbc:postgresql://${dotenv["DB_HOST"]}:${dotenv["DB_PORT"] ?: "5432"}/${dotenv["DB_NAME"] ?: "postgres"}"
+    val user = dotenv["DB_USER"] ?: error("Brak DB_USER")
+    val password = dotenv["DB_PASSWORD"] ?: error("Brak DB_PASSWORD")
+
+    println("🔌 Łączę z bazą: $jdbcUrl")
+    println("📂 Wczytuję plik: ${plik.name}")
+
+    val budynki = wczytajZalaczniki(plik)
+    val lacznie = budynki.sumOf { it.prace.size }
+    val lacznieMat = budynki.sumOf { b -> b.prace.sumOf { it.materialy.size } }
+    println("📊 Znaleziono: ${budynki.size} budynków, $lacznie prac, $lacznieMat pozycji materiałów")
+    println()
+
+    if (budynki.isEmpty()) { println("⚠️ Brak danych!"); return }
+
+    println("=== Podgląd ===")
+    budynki.take(3).forEach { b ->
+        println("  📍 ${b.ulica}")
+        b.prace.take(2).forEach { p ->
+            println("     ${p.data} | ${p.roboczogodziny}h | VAT ${p.vat}% | ${p.opis.take(50)}...")
+            p.materialy.forEach { m -> println("       🔧 ${m.nazwa} x${m.ilosc}") }
+        }
+    }
+    println()
+
+    print("Czy chcesz importować? (T/N): ")
+    if (readLine()?.trim()?.uppercase() != "T") { println("❌ Anulowano"); return }
+
+    println()
+    println("⏳ Importuję...")
+
+    val result = importujZalacznikDoBazy(jdbcUrl, user, password, budynki)
+
+    println()
+    println("=== Wynik ===")
+    println("✅ Budynki dodane:    ${result.budynkiDodane}")
+    println("⏭️  Budynki istniały:  ${result.budynkiIstniejace}")
+    println("✅ Prace dodane:      ${result.praceDodane}")
+    println("✅ Materiały dodane:  ${result.materialyDodane}")
+    println("⚠️  Materiały nieznane: ${result.materialyNieznane.size}")
+    println("❌ Błędy:             ${result.bledy.size}")
+
+    if (result.materialyNieznane.isNotEmpty()) {
+        println()
+        println("=== Nieznane materiały (nie znaleziono w tabeli materialy) ===")
+        result.materialyNieznane.forEach { println("  • $it") }
+    }
+
+    if (result.bledy.isNotEmpty()) {
+        println()
+        println("=== Błędy ===")
+        result.bledy.forEach { println("  • $it") }
+    }
+
+    println()
+    println("🎉 Import zakończony!")
+}
+
+// === Modele ===
+
+data class MaterialExcel(
+    val nazwa: String,
+    val ilosc: Double
+)
+
+data class PracaExcel(
+    val data: LocalDate,
+    val opis: String,
+    val roboczogodziny: Int,
+    val kosztDojazdu: Double,
+    val vat: Int,
+    val materialy: List<MaterialExcel>
+)
+
+data class BudynekExcel(
+    val ulica: String,
+    val prace: List<PracaExcel>
+)
+
+data class ZalacznikImportResult(
+    val budynkiDodane: Int,
+    val budynkiIstniejace: Int,
+    val praceDodane: Int,
+    val materialyDodane: Int,
+    val materialyNieznane: List<String>,
+    val bledy: List<String>
+)
+
+// === Parsowanie Excel ===
+
+fun wczytajZalaczniki(plik: File): List<BudynekExcel> {
+    val workbook: Workbook = plik.inputStream().use { XSSFWorkbook(it) }
+    val wyniki = mutableListOf<BudynekExcel>()
+
+    for (i in 0 until workbook.numberOfSheets) {
+        val sheet = workbook.getSheetAt(i)
+        val name = sheet.sheetName.trim()
+        if (name == "Cennik" || name.startsWith("Arkusz")) continue
+
+        val wierszeDanych = (10..sheet.lastRowNum)
+            .mapNotNull { sheet.getRow(it) }
+            .filter { row -> (0..15).any { row.getCell(it)?.cellType != CellType.BLANK } }
+
+        if (wierszeDanych.isEmpty()) continue
+
+        val prace = parsujPraceZMaterialami(wierszeDanych, name)
+        if (prace.isNotEmpty()) wyniki.add(BudynekExcel(ulica = name, prace = prace))
+    }
+
+    workbook.close()
+    return wyniki
+}
+
+fun parsujPraceZMaterialami(wiersze: List<Row>, sheetName: String): List<PracaExcel> {
+    // Grupuj wiersze po LP
+    val grupy = mutableListOf<List<Row>>()
+    var aktualna = mutableListOf<Row>()
+
+    for (wiersz in wiersze) {
+        val lp = wiersz.getCell(0)
+        if (lp != null && lp.cellType == CellType.NUMERIC) {
+            if (aktualna.isNotEmpty()) grupy.add(aktualna.toList())
+            aktualna = mutableListOf(wiersz)
+        } else if (aktualna.isNotEmpty()) {
+            aktualna.add(wiersz)
+        }
+    }
+    if (aktualna.isNotEmpty()) grupy.add(aktualna)
+
+    val prace = mutableListOf<PracaExcel>()
+
+    for (grupa in grupy) {
+        val pierwsza = grupa[0]
+
+        val data = pobierzDateKom(pierwsza.getCell(1)) ?: run {
+            println("  [WARN] $sheetName LP=${pierwsza.getCell(0)?.numericCellValue?.toInt()}: brak daty, pomijam")
+            continue
+        }
+
+        val opis = pobierzKomorke(pierwsza.getCell(2))?.trim() ?: run {
+            println("  [WARN] $sheetName LP=${pierwsza.getCell(0)?.numericCellValue?.toInt()}: brak opisu, pomijam")
+            continue
+        }
+
+        var roboczogodziny = 0
+        var kosztDojazdu = 0.0
+        var vat = 23
+        val materialy = mutableListOf<MaterialExcel>()
+
+        for (wiersz in grupa) {
+            // roboczogodziny - col 3
+            wiersz.getCell(3)?.takeIf { it.cellType == CellType.NUMERIC }?.let {
+                roboczogodziny = it.numericCellValue.toInt()
+            }
+
+            // materiał - col 5 (nazwa), col 6 (ilość)
+            val nazwaM = pobierzKomorke(wiersz.getCell(5))
+            val ilosc = wiersz.getCell(6)?.takeIf { it.cellType == CellType.NUMERIC }?.numericCellValue
+            if (!nazwaM.isNullOrBlank() && ilosc != null && ilosc > 0) {
+                materialy.add(MaterialExcel(nazwa = nazwaM.trim(), ilosc = ilosc))
+            }
+
+            // dojazd - col 12 gdy col 10 == "dojazd"
+            if (pobierzKomorke(wiersz.getCell(10)) == "dojazd") {
+                wiersz.getCell(12)?.takeIf { it.cellType == CellType.NUMERIC }?.let {
+                    kosztDojazdu = it.numericCellValue
+                }
+            }
+
+            // VAT - col 14 lub 15 jako 0.08 / 0.23
+            for (vatCol in listOf(14, 15)) {
+                wiersz.getCell(vatCol)?.takeIf { it.cellType == CellType.NUMERIC }?.let {
+                    val v = it.numericCellValue
+                    val vInt = Math.round(v * 100).toInt()
+                    if (vInt in listOf(8, 23)) vat = vInt
+                }
+            }
+        }
+
+        prace.add(PracaExcel(data, opis, roboczogodziny, kosztDojazdu, vat, materialy))
+    }
+
+    return prace
+}
+
+// === Import do bazy ===
+
+fun importujZalacznikDoBazy(
+    jdbcUrl: String,
+    user: String,
+    password: String,
+    budynki: List<BudynekExcel>
+): ZalacznikImportResult {
+    var budynkiDodane = 0
+    var budynkiIstniejace = 0
+    var praceDodane = 0
+    var materialyDodane = 0
+    val materialyNieznane = mutableListOf<String>()
+    val bledy = mutableListOf<String>()
+    val miasto = "Katowice"
+
+    DriverManager.getConnection(jdbcUrl, user, password).use { conn ->
+        // Załaduj słownik materiałów: nazwa lowercase -> id
+        val slownikMaterialow = mutableMapOf<String, Long>()
+        conn.createStatement().use { stmt ->
+            val rs = stmt.executeQuery("SELECT id, LOWER(nazwa) FROM materialy")
+            while (rs.next()) slownikMaterialow[rs.getString(2)] = rs.getLong(1)
+        }
+        println("ℹ️  Załadowano ${slownikMaterialow.size} materiałów ze słownika")
+
+        val sqlSelectBudynek = "SELECT id FROM budynki WHERE ulica = ? AND miasto = ?"
+        val sqlInsertBudynek = "INSERT INTO budynki (ulica, miasto) VALUES (?, ?) RETURNING id"
+        val sqlInsertPraca = """
+            INSERT INTO praca (data, opis, roboczogodziny, koszt_dojazdu, vat, budynek_id)
+            VALUES (?, ?, ?, ?, ?, ?) RETURNING id
+        """.trimIndent()
+        val sqlInsertPracaMaterial = """
+            INSERT INTO praca_material (ilosc, material_id, praca_id) VALUES (?, ?, ?)
+        """.trimIndent()
+
+        for (budynek in budynki) {
+            try {
+                val budynekId: Long = conn.prepareStatement(sqlSelectBudynek).use { stmt ->
+                    stmt.setString(1, budynek.ulica)
+                    stmt.setString(2, miasto)
+                    val rs = stmt.executeQuery()
+                    if (rs.next()) {
+                        budynkiIstniejace++; rs.getLong(1)
+                    } else {
+                        budynkiDodane++
+                        conn.prepareStatement(sqlInsertBudynek).use { ins ->
+                            ins.setString(1, budynek.ulica)
+                            ins.setString(2, miasto)
+                            val rs2 = ins.executeQuery()
+                            rs2.next(); rs2.getLong(1)
+                        }
+                    }
+                }
+
+                for (praca in budynek.prace) {
+                    try {
+                        // Wstaw pracę i pobierz jej id
+                        val pracaId: Long = conn.prepareStatement(sqlInsertPraca).use { stmt ->
+                            stmt.setDate(1, Date.valueOf(praca.data))
+                            stmt.setString(2, praca.opis)
+                            stmt.setInt(3, praca.roboczogodziny)
+                            stmt.setDouble(4, praca.kosztDojazdu)
+                            stmt.setInt(5, praca.vat)
+                            stmt.setLong(6, budynekId)
+                            val rs = stmt.executeQuery()
+                            rs.next(); rs.getLong(1)
+                        }
+                        praceDodane++
+
+                        // Wstaw materiały pracy
+                        conn.prepareStatement(sqlInsertPracaMaterial).use { stmt ->
+                            for (mat in praca.materialy) {
+                                val materialId = slownikMaterialow[mat.nazwa.lowercase()]
+                                if (materialId == null) {
+                                    val klucz = "${budynek.ulica} | ${praca.data} | ${mat.nazwa}"
+                                    if (klucz !in materialyNieznane) materialyNieznane.add(klucz)
+                                    continue
+                                }
+                                stmt.setDouble(1, mat.ilosc)
+                                stmt.setLong(2, materialId)
+                                stmt.setLong(3, pracaId)
+                                stmt.executeUpdate()
+                                materialyDodane++
+                            }
+                        }
+                    } catch (e: Exception) {
+                        bledy.add("${budynek.ulica} | ${praca.data}: ${e.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                bledy.add("Budynek '${budynek.ulica}': ${e.message}")
+            }
+        }
+    }
+
+    return ZalacznikImportResult(budynkiDodane, budynkiIstniejace, praceDodane, materialyDodane, materialyNieznane, bledy)
+}
+
+// === Helpers ===
+
+fun pobierzKomorke(cell: Cell?): String? {
+    if (cell == null) return null
+    return when (cell.cellType) {
+        CellType.STRING -> cell.stringCellValue.trim().takeIf { it.isNotBlank() }
+        CellType.NUMERIC -> {
+            val n = cell.numericCellValue
+            if (n == n.toLong().toDouble()) n.toLong().toString() else n.toString()
+        }
+        else -> null
+    }
+}
+
+fun pobierzDateKom(cell: Cell?): LocalDate? {
+    if (cell == null) return null
+    return try {
+        when (cell.cellType) {
+            CellType.NUMERIC -> cell.dateCellValue.toInstant()
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+            else -> null
+        }
+    } catch (e: Exception) { null }
+}
