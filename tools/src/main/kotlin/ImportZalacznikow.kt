@@ -203,7 +203,7 @@ fun parsujPraceZMaterialami(wiersze: List<Row>, sheetName: String): List<PracaEx
 
         var roboczogodziny = 0
         var kosztDojazdu = 0.0
-        var vat = 23
+        var vat = 8
         val materialy = mutableListOf<MaterialExcel>()
 
         for (wiersz in grupa) {
