@@ -167,7 +167,7 @@ class ExportToExcelUseCase {
             }
 
             // Suma wiersza
-            val kosztMat = wiersz.materialy.firstOrNull()?.kosztCalkowity ?: 0.0
+            val kosztMat = wiersz.materialy.sumOf { it.kosztCalkowity }
             val vatMat = kosztMat * 0.08
             val suma = wiersz.kosztRobocizny + wiersz.kosztDojazdu + kosztMat + vatMat
             cell(13, suma, styles.kwotaSuma)

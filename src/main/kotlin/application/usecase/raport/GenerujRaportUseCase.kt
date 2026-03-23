@@ -53,7 +53,7 @@ class GenerujRaportUseCase(
     private val materialRepository: MaterialRepository,
     private val ustawieniaRepository: UstawieniaRepository
 ) {
-    operator fun invoke(budynekId: Long, rok: Int, miesiac: Int): Result<DaneRaportu> {
+    operator fun invoke(budynekId: Long, rok: Int, miesiac: Int, numerFaktury: String = ""): Result<DaneRaportu> {
         return try {
             val budynek = budynekRepository.pobierzPoId(budynekId)
                 ?: throw IllegalArgumentException("Budynek nie istnieje")
@@ -114,6 +114,7 @@ class GenerujRaportUseCase(
 
             Result.success(
                 DaneRaportu(
+                    numerFaktury = numerFaktury,
                     budynek = budynek,
                     rok = rok,
                     miesiac = miesiac,

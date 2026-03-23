@@ -1,7 +1,9 @@
 package pl.rafapp.marko.appendixCreator.presentation.ui.screen
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -155,6 +157,16 @@ fun PanelKonfiguracji(viewModel: RaportViewModel) {
                 Spacer(Modifier.height(12.dp))
             }
 
+            OutlinedTextField(
+                value = viewModel.nrFaktury,
+                onValueChange = { viewModel.ustawNrFaktury(it) },
+                label = { Text("Nr faktury") },
+                placeholder = { Text("np. 1/2026") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(Modifier.height(12.dp))
+
             // === Rok i miesiąc ===
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -270,22 +282,27 @@ fun PodgladRaportu(dane: DaneRaportu, viewModel: RaportViewModel) {
         .getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
         .replaceFirstChar { it.uppercase() }
 
-    Card(
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Card(elevation = CardDefaults.cardElevation(2.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
-                Column {
-                    Text("Podgląd raportu", style = MaterialTheme.typography.titleMedium)
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "$nazwaeMiesiaca ${dane.rok} • ${dane.budynek.pelnyAdres}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        "Załącznik do faktury nr ${dane.numerFaktury}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Kalkulacja kosztów czynności wykonanych przez F.H.U. Marko Marek Grabowski",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text("Dotyczy ul. ${dane.budynek.pelnyAdres}", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Stawka roboczogodziny ${dane.stawkaRoboczogodziny.toInt()} zł",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
                 Button(
@@ -306,102 +323,168 @@ fun PodgladRaportu(dane: DaneRaportu, viewModel: RaportViewModel) {
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-            Divider()
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            dane.wiersze.forEach { wiersz ->
-                WierszPracy(wiersz)
-                Spacer(Modifier.height(8.dp))
-                Divider(color = MaterialTheme.colorScheme.surfaceVariant)
-                Spacer(Modifier.height(8.dp))
-            }
-
-            Spacer(Modifier.height(8.dp))
-            PodsumowanieRaportu(dane)
-        }
-    }
-}
-
-@Composable
-fun WierszPracy(wiersz: WierszRaportu) {
-    val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                wiersz.data.format(formatter),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-            Text("VAT: ${wiersz.vat}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-
-        Spacer(Modifier.height(4.dp))
-        Text(wiersz.opis, style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(8.dp))
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Robocizna: ${wiersz.roboczogodziny}h × ${formatKwota(wiersz.stawkaRoboczogodziny)} zł/h", style = MaterialTheme.typography.bodySmall)
-            Text(formatKwota(wiersz.kosztRobocizny) + " zł", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-        }
-
-        if (wiersz.kosztDojazdu > 0) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Dojazd:", style = MaterialTheme.typography.bodySmall)
-                Text(formatKwota(wiersz.kosztDojazdu) + " zł", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-
-        if (wiersz.materialy.isNotEmpty()) {
-            Spacer(Modifier.height(4.dp))
-            Text("Materiały:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            wiersz.materialy.forEach { m ->
-                Row(modifier = Modifier.fillMaxWidth().padding(start = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("• ${m.nazwa}: ${m.ilosc} ${m.jednostka} × ${formatKwota(m.cenaZaJednostke)} zł", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                    Text(formatKwota(m.kosztCalkowity) + " zł", style = MaterialTheme.typography.bodySmall)
+            Box(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                Column {
+                    TabelaNaglowek()
+                    dane.wiersze.forEachIndexed { idx, wiersz ->
+                        TabelaWierszZlecenia(idx + 1, wiersz)
+                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
+                    TabelaSuma(dane)
                 }
             }
         }
+    }
+}
 
-        Spacer(Modifier.height(4.dp))
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+// Szerokości kolumn
+private val colLP = 28.dp
+private val colData = 72.dp
+private val colUsluga = 210.dp
+private val colGodz = 48.dp
+private val colWartRob = 64.dp
+private val colNazwaMat = 130.dp
+private val colIloscMat = 44.dp
+private val colJedn = 44.dp
+private val colWartMat = 64.dp
+private val colKoszt8 = 56.dp
+private val colTransNazwa = 64.dp
+private val colTransIl = 32.dp
+private val colTransWart = 52.dp
+private val colSuma = 68.dp
+private val colVat = 40.dp
+
+@Composable
+private fun TabelaNaglowek() {
+    val s = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+    Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+        Row(modifier = Modifier.padding(vertical = 3.dp, horizontal = 2.dp)) {
+            listOf(
+                colLP to "LP", colData to "Data", colUsluga to "Usługa",
+                colGodz to "Godz", colWartRob to "Roboc.",
+                colNazwaMat to "Materiał", colIloscMat to "Il.", colJedn to "Jedn.",
+                colWartMat to "W.mat", colKoszt8 to "8%",
+                colTransNazwa to "Transp.", colTransIl to "Il.", colTransWart to "W.tr.",
+                colSuma to "Suma", colVat to "VAT"
+            ).forEach { (w, label) ->
+                Text(label, style = s, modifier = Modifier.width(w).padding(horizontal = 2.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabelaWierszZlecenia(lp: Int, wiersz: WierszRaportu) {
+    val formatter = DateTimeFormatter.ofPattern("dd.MM.yy")
+    val s = MaterialTheme.typography.bodySmall
+    val rows = maxOf(1, wiersz.materialy.size)
+
+    (0 until rows).forEach { i ->
+        val isFirst = i == 0
+        val isLast = i == rows - 1
+        val mat = wiersz.materialy.getOrNull(i)
+
+        Row(modifier = Modifier.padding(vertical = 1.dp, horizontal = 2.dp)) {
+            Text(if (isFirst) lp.toString() else "", style = s, modifier = Modifier.width(colLP))
             Text(
-                "Netto: ${formatKwota(wiersz.kosztNetto)} zł  |  Brutto: ${formatKwota(wiersz.kosztBrutto)} zł",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                if (isFirst) wiersz.data.format(formatter) else "",
+                style = s.copy(color = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.width(colData)
+            )
+            Text(
+                if (isFirst) wiersz.opis else "",
+                style = s,
+                modifier = Modifier.width(colUsluga),
+                maxLines = 4,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+            Text(
+                if (isLast) wiersz.roboczogodziny.toString() else "",
+                style = s,
+                modifier = Modifier.width(colGodz),
+                textAlign = TextAlign.End
+            )
+            Text(
+                if (isLast) formatKwota(wiersz.kosztRobocizny) else "",
+                style = s,
+                modifier = Modifier.width(colWartRob),
+                textAlign = TextAlign.End
+            )
+            Text(mat?.nazwa ?: "", style = s, modifier = Modifier.width(colNazwaMat), maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(
+                mat?.let { formatKwota(it.ilosc) } ?: "",
+                style = s,
+                modifier = Modifier.width(colIloscMat),
+                textAlign = TextAlign.End
+            )
+            Text(mat?.jednostka ?: "", style = s, modifier = Modifier.width(colJedn))
+            Text(
+                mat?.let { formatKwota(it.kosztCalkowity) } ?: "",
+                style = s,
+                modifier = Modifier.width(colWartMat),
+                textAlign = TextAlign.End
+            )
+            Text(
+                mat?.let { formatKwota(it.kosztCalkowity * 0.08) } ?: "",
+                style = s,
+                modifier = Modifier.width(colKoszt8),
+                textAlign = TextAlign.End
+            )
+            Text(
+                if (isLast && wiersz.kosztDojazdu > 0) "dojazd" else "",
+                style = s,
+                modifier = Modifier.width(colTransNazwa)
+            )
+            Text(
+                if (isLast && wiersz.kosztDojazdu > 0) "1" else "",
+                style = s,
+                modifier = Modifier.width(colTransIl),
+                textAlign = TextAlign.Center
+            )
+            Text(
+                if (isLast && wiersz.kosztDojazdu > 0) formatKwota(wiersz.kosztDojazdu) else "",
+                style = s,
+                modifier = Modifier.width(colTransWart),
+                textAlign = TextAlign.End
+            )
+            Text(
+                if (isLast) formatKwota(wiersz.kosztBrutto) else "",
+                style = s.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.width(colSuma),
+                textAlign = TextAlign.End
+            )
+            Text(
+                if (isLast) "${wiersz.vat}%" else "",
+                style = s,
+                modifier = Modifier.width(colVat),
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
 @Composable
-fun PodsumowanieRaportu(dane: DaneRaportu) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("Podsumowanie", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
-
-            PozycjaPodsumowania("Łączne roboczogodziny:", "${dane.sumaRoboczogodzin} h")
-            PozycjaPodsumowania("Koszt robocizny:", "${formatKwota(dane.sumaKosztowRobocizny)} zł")
-            PozycjaPodsumowania("Koszt dojazdu:", "${formatKwota(dane.sumaKosztowDojazdu)} zł")
-            PozycjaPodsumowania("Koszt materiałów:", "${formatKwota(dane.sumaKosztowMaterialow)} zł")
-
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-            PozycjaPodsumowania("Wartość netto:", "${formatKwota(dane.sumaNetto)} zł")
-            PozycjaPodsumowania("Kwota VAT:", "${formatKwota(dane.sumaVat)} zł")
-
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("WARTOŚĆ BRUTTO:", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text("${formatKwota(dane.sumaBrutto)} zł", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            }
+private fun TabelaSuma(dane: DaneRaportu) {
+    val labelWidth = colLP + colData + colUsluga + colGodz + colWartRob +
+            colNazwaMat + colIloscMat + colJedn + colWartMat + colKoszt8 +
+            colTransNazwa + colTransIl + colTransWart
+    Surface(color = MaterialTheme.colorScheme.primaryContainer) {
+        Row(modifier = Modifier.padding(vertical = 3.dp, horizontal = 2.dp)) {
+            Text(
+                "RAZEM",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.width(labelWidth)
+            )
+            Text(
+                formatKwota(dane.sumaBrutto) + " zł",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.width(colSuma),
+                textAlign = TextAlign.End
+            )
         }
     }
 }

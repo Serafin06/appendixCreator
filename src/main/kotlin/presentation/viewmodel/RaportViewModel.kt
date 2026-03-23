@@ -64,6 +64,14 @@ class RaportViewModel(
     var kosztDojazdu by mutableStateOf("25.00")
         private set
 
+    var nrFaktury by mutableStateOf("")
+        private set
+
+    fun ustawNrFaktury(nr: String) {
+        nrFaktury = nr
+        clearMessages()
+    }
+
     var typRaportu by mutableStateOf(TypRaportu.POJEDYNCZY_BUDYNEK)
         private set
 
@@ -160,7 +168,7 @@ class RaportViewModel(
             errorMessage = null
             daneRaportu = null
             withContext(Dispatchers.IO) {
-                generujRaportUseCase(budynekId, wybranyRok, wybranyMiesiac)
+                generujRaportUseCase(budynekId, wybranyRok, wybranyMiesiac, nrFaktury)
                     .onSuccess { daneRaportu = it }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }
             }
