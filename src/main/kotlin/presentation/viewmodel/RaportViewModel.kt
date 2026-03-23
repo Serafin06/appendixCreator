@@ -168,7 +168,7 @@ class RaportViewModel(
             errorMessage = null
             daneRaportu = null
             withContext(Dispatchers.IO) {
-                generujRaportUseCase(budynekId, wybranyRok, wybranyMiesiac, nrFaktury)
+                generujRaportUseCase(budynekId, wybranyRok, wybranyMiesiac)
                     .onSuccess { daneRaportu = it }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }
             }
@@ -221,7 +221,7 @@ class RaportViewModel(
             successMessage = null
             withContext(Dispatchers.IO) {
                 exportWszystkichBudynkowUseCase(folder, wybranyRok, wybranyMiesiac)
-                    .onSuccess { successMessage = "Zapisano ${it.size} plików w: ${folder.absolutePath}" }
+                    .onSuccess { successMessage = "Zapisano: ${it.absolutePath}" }
                     .onFailure { errorMessage = "Błąd eksportu: ${it.message}" }
             }
             isLoading = false

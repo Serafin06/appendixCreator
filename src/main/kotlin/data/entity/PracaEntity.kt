@@ -29,6 +29,9 @@ data class PracaEntity(
     @Column(name = "budynek_id", nullable = false)
     val budynekId: Long = 0,
 
+    @Column(name = "nr_faktury", nullable = true)
+    val nrFaktury: String? = null,
+
     @OneToMany(mappedBy = "praca", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
     val materialy: MutableList<PracaMaterialEntity> = mutableListOf()
 ) {
@@ -40,6 +43,8 @@ data class PracaEntity(
         kosztDojazdu = kosztDojazdu,
         vat = vat,
         budynekId = budynekId,
+        nrFaktury = nrFaktury,
+
         materialy = materialy.map { it.toDomain() }
     )
 
@@ -52,6 +57,7 @@ data class PracaEntity(
                 roboczogodziny = praca.roboczogodziny,
                 kosztDojazdu = praca.kosztDojazdu,
                 vat = praca.vat,
+                nrFaktury = praca.nrFaktury,
                 budynekId = praca.budynekId
             )
 

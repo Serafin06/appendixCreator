@@ -13,5 +13,6 @@ data class Praca(
     val kosztDojazdu: Double,
     val vat: Int,
     val budynekId: Long,
+    val nrFaktury: String? = null,
     val materialy: List<PracaMaterial> = emptyList()
 )

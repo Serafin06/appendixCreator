@@ -178,11 +178,21 @@ fun PracaCard(
                         budynek?.displayNazwa() ?: "Budynek usunięty",
                         style = MaterialTheme.typography.titleMedium
                     )
+
                     Text(
                         praca.data.format(formatter),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
+
+                    if (praca.nrFaktury.isNullOrBlank()) {
+                        Text(
+                            "Faktura: ${praca.nrFaktury}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     Spacer(Modifier.height(4.dp))
                     Text(
                         praca.opis,
@@ -272,6 +282,9 @@ fun FormularzPracy(
     var godziny by remember { mutableStateOf(pracaDoEdycji?.roboczogodziny?.toString() ?: "3") }
     var czyDojazd by remember { mutableStateOf((pracaDoEdycji?.kosztDojazdu ?: 0.0) > 0) }
     var vat by remember { mutableStateOf(pracaDoEdycji?.vat ?: 23) }
+    var nrFaktury by remember {
+        mutableStateOf(pracaDoEdycji?.nrFaktury ?: viewModel.sugerujNrFaktury())
+    }
     var wybraneMaterialy by remember {
         mutableStateOf(pracaDoEdycji?.materialy?.map { it.materialId to it.ilosc } ?: emptyList<Pair<Long, Double>>())
     }
@@ -390,6 +403,17 @@ fun FormularzPracy(
                 Card(elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("2. Szczegóły pracy", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = nrFaktury,
+                            onValueChange = { nrFaktury = it },
+                            label = { Text("Nr faktury") },
+                            placeholder = { Text("np. 1/2026") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+
                         Spacer(Modifier.height(8.dp))
 
                         // Data
@@ -552,6 +576,7 @@ fun FormularzPracy(
                         roboczogodziny = godzinyInt,
                         kosztDojazdu = if (czyDojazd) viewModel.domyslnyKosztDojazdu else 0.0,
                         vat = vat,
+                        nrFaktury = nrFaktury,
                         materialy = materialyDoPracy
                     )
                     if (isEditing) viewModel.edytujPrace(praca)
@@ -562,6 +587,7 @@ fun FormularzPracy(
                         godziny = godzinyInt,
                         kosztDojazdu = if (czyDojazd) viewModel.domyslnyKosztDojazdu else 0.0,
                         vat = vat,
+                        nrFaktury = nrFaktury,
                         wybraneMaterialy = materialyDoPracy
                     )
                 }

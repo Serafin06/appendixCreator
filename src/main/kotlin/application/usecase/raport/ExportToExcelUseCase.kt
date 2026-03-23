@@ -35,6 +35,27 @@ class ExportToExcelUseCase {
         }
     }
 
+    fun invokeMulti(raporty: List<DaneRaportu>, plik: File): Result<File> {
+        return try {
+            val workbook = XSSFWorkbook()
+            val styles = createStyles(workbook)
+            raporty.forEach { dane ->
+                val sheetName = dane.budynek.ulica.take(31)
+                val sheet = workbook.createSheet(sheetName)
+                dodajNaglowek(sheet, styles, dane)
+                dodajNaglowekTabeli(sheet, styles)
+                val lastDataRow = dodajWiersze(sheet, styles, dane)
+                dodajSumowanie(sheet, styles, dane, lastDataRow)
+                ustawSzerokosci(sheet)
+            }
+            plik.outputStream().use { workbook.write(it) }
+            workbook.close()
+            Result.success(plik)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // === Wiersz 1 pusty, wiersze 2-5: nagłówek tekstowy ===
     private fun dodajNaglowek(sheet: Sheet, styles: ExcelStyles, dane: DaneRaportu) {
         sheet.createRow(0) // row 1 - pusta

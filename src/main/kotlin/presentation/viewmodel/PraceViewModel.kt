@@ -85,6 +85,7 @@ class PraceViewModel(
         godziny: Int,
         kosztDojazdu: Double,
         vat: Int,
+        nrFaktury: String,
         wybraneMaterialy: List<PracaMaterial>
     ) {
         scope.launch {
@@ -99,6 +100,7 @@ class PraceViewModel(
                 roboczogodziny = godziny,
                 kosztDojazdu = kosztDojazdu,
                 vat = vat,
+                nrFaktury = nrFaktury,
                 materialy = wybraneMaterialy
             )
 
@@ -151,6 +153,17 @@ class PraceViewModel(
 
             isLoading = false
         }
+    }
+
+    fun sugerujNrFaktury(): String {
+        val rok = LocalDate.now().year
+        val maxNr = prace
+            .map { it.nrFaktury }
+            .mapNotNull { nr ->
+                nr?.split("/")?.firstOrNull()?.trim()?.toIntOrNull()
+            }
+            .maxOrNull() ?: 0
+        return "${maxNr + 1}/$rok"
     }
 
     fun clearMessages() {
