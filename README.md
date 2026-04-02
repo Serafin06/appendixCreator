@@ -244,12 +244,11 @@ If you have any questions or issues, please open an issue on GitHub.
 ---
 
 **Made with ❤️ using Kotlin and Compose Desktop**
-```
 
 ---
 
 ## 📄 LICENSE (MIT)
-```
+
 MIT License
 
 Copyright (c) 2025 RafApp
