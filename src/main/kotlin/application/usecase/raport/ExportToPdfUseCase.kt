@@ -88,7 +88,7 @@ class ExportToPdfUseCase : RaportExporter {
             "Kalkulacja kosztów czynności wykonanych przez F.H.U. Marko Marek Grabowski",
             "Dotyczy ul. ${dane.budynek.ulica}",
             "Stawka roboczogodziny ${dane.stawkaRoboczogodziny.toInt()} zł"
-        ).forEach { doc.add(Paragraph(it, font)) }
+        ).forEach{ doc.add(Paragraph(it, font).apply { alignment = Element.ALIGN_CENTER }) }
         doc.add(Paragraph(" ", font))
     }
 
@@ -113,38 +113,39 @@ class ExportToPdfUseCase : RaportExporter {
             .forEach { t.addCell(c(it)) }
     }
 
-    /** Praca zajmuje tyle wierszy, ile ma materiałów (min. 1); robocizna/dojazd/suma w ostatnim wierszu. */
+    /** Praca zajmuje tyle wierszy, ile ma materiałów (min. 1); wszystko poza materiałami jest scalone w pionie. */
     private fun dodajPrace(t: PdfPTable, lp: Int, w: WierszRaportu) {
         val n = maxOf(w.materialy.size, 1)
+        val dojazd = w.kosztDojazdu > 0
+
         for (i in 0 until n) {
-            val ostatni = i == n - 1
             if (i == 0) {
-                t.addCell(c(lp.toString(), rowspan = n))
-                t.addCell(c(w.data.format(formatData), rowspan = n))
-                t.addCell(c(w.opis, Element.ALIGN_LEFT, rowspan = n))
+                t.addCell(c(lp.toString(), rowspan = n, valign = Element.ALIGN_TOP))
+                t.addCell(c(w.data.format(formatData), rowspan = n, valign = Element.ALIGN_TOP))
+                t.addCell(c(w.opis, Element.ALIGN_LEFT, rowspan = n, valign = Element.ALIGN_BOTTOM))
+                t.addCell(c(w.roboczogodziny.toString(), rowspan = n, valign = Element.ALIGN_BOTTOM))
+                t.addCell(c(kwota(w.kosztRobocizny), valign = Element.ALIGN_BOTTOM, rowspan = n))
             }
-            t.addCell(c(if (ostatni) w.roboczogodziny.toString() else ""))
-            t.addCell(c(if (ostatni) kwota(w.kosztRobocizny) else "", Element.ALIGN_RIGHT))
 
             val m = w.materialy.getOrNull(i)
-            t.addCell(c(m?.nazwa ?: "", Element.ALIGN_LEFT))
-            t.addCell(c(m?.let { formatIlosci.format(it.ilosc) } ?: ""))
-            t.addCell(c(m?.jednostka ?: ""))
-            t.addCell(c(m?.let { kwota(it.kosztCalkowity) } ?: "", Element.ALIGN_RIGHT))
-            t.addCell(c(m?.let { kwota(it.kosztCalkowity * NARZUT_MATERIALOW) } ?: "", Element.ALIGN_RIGHT))
+            t.addCell(c(m?.nazwa ?: "", align = Element.ALIGN_LEFT, valign = Element.ALIGN_BOTTOM))
+            t.addCell(c(m?.let { formatIlosci.format(it.ilosc) } ?: "", valign = Element.ALIGN_BOTTOM))
+            t.addCell(c(m?.jednostka ?: "", valign = Element.ALIGN_BOTTOM))
+            t.addCell(c(m?.let { kwota(it.kosztCalkowity) } ?: "", align = Element.ALIGN_RIGHT, valign = Element.ALIGN_BOTTOM))
+            t.addCell(c(m?.let { kwota(it.kosztCalkowity * NARZUT_MATERIALOW) } ?: "", align = Element.ALIGN_RIGHT, valign = Element.ALIGN_BOTTOM))
 
-            val dojazd = ostatni && w.kosztDojazdu > 0
-            t.addCell(c(if (dojazd) "dojazd" else ""))
-            t.addCell(c(if (dojazd) "1" else ""))
-            t.addCell(c(if (dojazd) kwota(w.kosztDojazdu) else "", Element.ALIGN_RIGHT))
-
-            t.addCell(c(if (ostatni) kwota(sumaPracy(w)) else "", Element.ALIGN_RIGHT))
+            if (i == 0) {
+                t.addCell(c(if (dojazd) "dojazd" else "", rowspan = n, valign = Element.ALIGN_BOTTOM))
+                t.addCell(c(if (dojazd) "1" else "", rowspan = n,valign = Element.ALIGN_BOTTOM))
+                t.addCell(c(if (dojazd) kwota(w.kosztDojazdu) else "", valign = Element.ALIGN_BOTTOM, rowspan = n))
+                t.addCell(c(kwota(sumaPracy(w)), valign = Element.ALIGN_BOTTOM, rowspan = n))
+            }
         }
     }
 
     private fun dodajSume(t: PdfPTable, dane: DaneRaportu) {
         t.addCell(c("", colspan = 13, ramka = false))
-        t.addCell(c(kwota(dane.wiersze.sumOf { sumaPracy(it) }), Element.ALIGN_RIGHT))
+        t.addCell(c(kwota(dane.wiersze.sumOf { sumaPracy(it) }), valign = Element.ALIGN_BOTTOM))
     }
 
     private fun sumaPracy(w: WierszRaportu) =
@@ -157,10 +158,11 @@ class ExportToPdfUseCase : RaportExporter {
         align: Int = Element.ALIGN_CENTER,
         rowspan: Int = 1,
         colspan: Int = 1,
-        ramka: Boolean = true
+        ramka: Boolean = true,
+        valign: Int = Element.ALIGN_MIDDLE
     ) = PdfPCell(Phrase(tekst, font)).apply {
         horizontalAlignment = align
-        verticalAlignment = Element.ALIGN_MIDDLE
+        verticalAlignment = valign
         this.rowspan = rowspan
         this.colspan = colspan
         setPadding(2f)
