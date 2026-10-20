@@ -12,9 +12,12 @@ import pl.rafapp.marko.appendixCreator.application.usecase.praca.EdytujPraceUseC
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.PobierzPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.UsunPraceUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportToExcelUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportToPdfUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportWszystkichBudynkowUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.FormatEksportu
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportZbiorczyUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.RaportExporter
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.ZapiszUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.data.repository.BudynekRepositoryImpl
@@ -50,6 +53,12 @@ class DependencyContainer {
     )
     val exportToExcelUseCase = ExportToExcelUseCase()
 
+    val exportToPdfUseCase = ExportToPdfUseCase()
+    val eksportery: Map<FormatEksportu, RaportExporter> = mapOf(
+        FormatEksportu.EXCEL to exportToExcelUseCase,
+        FormatEksportu.PDF to exportToPdfUseCase
+    )
+
     // Use Cases - Budynki
     val dodajBudynekUseCase = DodajBudynekUseCase(budynekRepository)
     val pobierzBudynkiUseCase = PobierzBudynkiUseCase(budynekRepository)
@@ -73,8 +82,7 @@ class DependencyContainer {
     )
     val exportWszystkichBudynkowUseCase = ExportWszystkichBudynkowUseCase(
         pobierzBudynkiUseCase,
-        generujRaportUseCase,
-        exportToExcelUseCase
+        generujRaportUseCase
     )
 
     // ViewModels
@@ -107,7 +115,7 @@ class DependencyContainer {
         zapiszUstawieniaUseCase = zapiszUstawieniaUseCase,
         generujRaportUseCase = generujRaportUseCase,
         generujRaportZbiorczyUseCase = generujRaportZbiorczyUseCase,
-        exportToExcelUseCase = exportToExcelUseCase,
+        eksportery = eksportery,
         exportWszystkichBudynkowUseCase = exportWszystkichBudynkowUseCase
     )
 }

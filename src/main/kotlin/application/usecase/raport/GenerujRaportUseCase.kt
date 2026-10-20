@@ -68,9 +68,7 @@ class GenerujRaportUseCase(
                 .sortedBy { it.data }
 
             if (prace.isEmpty()) {
-                return Result.failure(
-                    IllegalStateException("Brak prac dla wybranego budynku i okresu")
-                )
+                return Result.failure(BrakPracException())
             }
 
             val wiersze = prace.map { praca ->
@@ -134,3 +132,5 @@ class GenerujRaportUseCase(
         }
     }
 }
+
+class BrakPracException : IllegalStateException("Brak prac dla wybranego budynku i okresu")

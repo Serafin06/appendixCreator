@@ -12,7 +12,10 @@ class GenerujRaportZbiorczyUseCase(
             val budynki = pobierzBudynkiUseCase().getOrElse { return Result.failure(it) }
 
             val wiersze = budynki.mapNotNull { budynek ->
-                generujRaportUseCase(budynek.id, rok, miesiac).getOrNull()?.let { dane ->
+                val dane = generujRaportUseCase(budynek.id, rok, miesiac).getOrElse {
+                    if (it is BrakPracException) return@mapNotNull null
+                    throw IllegalStateException("${budynek.ulica}: ${it.message}", it)
+                }
                     val w8 = dane.wiersze.filter { it.vat == 8 }
                     val w23 = dane.wiersze.filter { it.vat == 23 }
                     WierszBudynkuZbiorczy(
@@ -27,7 +30,7 @@ class GenerujRaportZbiorczyUseCase(
                         sumaVat = dane.sumaVat,
                         sumaBrutto = dane.sumaBrutto
                     )
-                }
+
             }.filter { it.sumaNetto > 0 }
 
             if (wiersze.isEmpty())

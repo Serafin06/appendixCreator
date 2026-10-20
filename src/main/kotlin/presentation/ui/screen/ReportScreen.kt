@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.DaneRaportu
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.DaneRaportuZbiorczego
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.FormatEksportu
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.WierszRaportu
 import pl.rafapp.marko.appendixCreator.presentation.viewmodel.RaportViewModel
 import java.time.format.DateTimeFormatter
@@ -255,6 +256,24 @@ fun PanelKonfiguracji(viewModel: RaportViewModel) {
 
             Spacer(Modifier.height(16.dp))
 
+            // === Format eksportu ===
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Format eksportu:", style = MaterialTheme.typography.bodyMedium)
+                FormatEksportu.entries.forEach { f ->
+                    FilterChip(
+                        selected = viewModel.formatEksportu == f,
+                        onClick = { viewModel.ustawFormat(f) },
+                        label = { Text(if (f == FormatEksportu.EXCEL) "Excel" else "PDF") }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             // === Przycisk generowania ===
             val generujEnabled = when (viewModel.typRaportu) {
                 RaportViewModel.TypRaportu.POJEDYNCZY_BUDYNEK -> viewModel.wybranyBudynekId != null
@@ -312,14 +331,14 @@ fun PodgladRaportu(dane: DaneRaportu, viewModel: RaportViewModel) {
                             fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
                         }
                         if (chooser.showSaveDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
-                            viewModel.exportExcel(chooser.selectedFile)
+                            viewModel.eksportuj(chooser.selectedFile)
                         }
                     },
                     enabled = !viewModel.isLoading
                 ) {
                     Icon(Icons.Default.Download, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Export to Excel")
+                    Text("Eksportuj")
                 }
             }
 
@@ -517,7 +536,7 @@ fun PodgladRaportuZbiorczego(dane: DaneRaportuZbiorczego, viewModel: RaportViewM
                 }
 
                 // Przycisk eksportu tylko dla trybu "Wszystkie budynki"
-                if (viewModel.typRaportu == RaportViewModel.TypRaportu.WSZYSTKIE_BUDYNKI) {
+
                     Button(
                         onClick = {
                             val chooser = javax.swing.JFileChooser().apply {
@@ -525,16 +544,19 @@ fun PodgladRaportuZbiorczego(dane: DaneRaportuZbiorczego, viewModel: RaportViewM
                                 fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
                             }
                             if (chooser.showSaveDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
-                                viewModel.exportExcel(chooser.selectedFile)
+                                viewModel.eksportuj(chooser.selectedFile)
                             }
                         },
                         enabled = !viewModel.isLoading
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Eksportuj wszystkie")
+                        Text(
+                            if (viewModel.typRaportu == RaportViewModel.TypRaportu.WSZYSTKIE_BUDYNKI) "Eksportuj wszystkie"
+                            else "Eksportuj zestawienie"
+                        )
                     }
-                }
+
             }
 
             Spacer(Modifier.height(16.dp))

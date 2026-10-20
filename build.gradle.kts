@@ -38,6 +38,7 @@ dependencies {
     // import to excel i pdf
     implementation("org.apache.poi:poi:5.3.0")
     implementation("org.apache.poi:poi-ooxml:5.3.0")
+    implementation("com.github.librepdf:openpdf:2.0.3")
 
     // Testy
     testImplementation(kotlin("test"))

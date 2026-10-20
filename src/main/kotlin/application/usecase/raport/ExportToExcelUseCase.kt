@@ -11,14 +11,15 @@ import java.time.format.DateTimeFormatter
  * Generuje arkusz zgodny ze wzorem "Załącznik do faktury"
  * Single Responsibility: tylko generowanie Excel
  */
-class ExportToExcelUseCase {
+class ExportToExcelUseCase : RaportExporter {
+    override val rozszerzenie = "xlsx"
 
     private val formatData = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
     operator fun invoke(dane: DaneRaportu, plik: File): Result<File> {
         return try {
             val workbook = XSSFWorkbook()
-            val sheet = workbook.createSheet(dane.budynek.ulica)
+            val sheet = workbook.createSheet(unikalnaNazwa(dane.budynek.ulica, mutableSetOf()))
             val styles = createStyles(workbook)
 
             dodajNaglowek(sheet, styles, dane)
@@ -39,9 +40,9 @@ class ExportToExcelUseCase {
         return try {
             val workbook = XSSFWorkbook()
             val styles = createStyles(workbook)
+            val uzyte = mutableSetOf<String>()
             raporty.forEach { dane ->
-                val sheetName = dane.budynek.ulica.take(31)
-                val sheet = workbook.createSheet(sheetName)
+                val sheet = workbook.createSheet(unikalnaNazwa(dane.budynek.ulica, uzyte))
                 dodajNaglowek(sheet, styles, dane)
                 dodajNaglowekTabeli(sheet, styles)
                 val lastDataRow = dodajWiersze(sheet, styles, dane)
@@ -54,6 +55,57 @@ class ExportToExcelUseCase {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    override fun eksportuj(raporty: List<DaneRaportu>, plik: File) = invokeMulti(raporty, plik)
+
+    /** Zestawienie zbiorcze: jeden arkusz, wiersz na budynek + wiersz "Razem". */
+    override fun eksportujZbiorczy(dane: DaneRaportuZbiorczego, plik: File): Result<File> = runCatching {
+        val wb: Workbook = XSSFWorkbook()
+        wb.use {
+            val styles = createStyles(wb)
+            val sheet = wb.createSheet("Zbiorcze")
+
+            sheet.createRow(1).createCell(0).apply {
+                setCellValue("Zestawienie zbiorcze za %02d.%d".format(dane.miesiac, dane.rok))
+                cellStyle = styles.naglowekTytul
+            }
+
+            val naglowek = sheet.createRow(3)
+            NAGLOWKI_ZBIORCZE.forEachIndexed { i, t ->
+                naglowek.createCell(i).apply { setCellValue(t); cellStyle = styles.naglowekKolumna }
+            }
+
+            var r = 4
+            dane.wierszeBudynkow.forEach { w ->
+                val row = sheet.createRow(r++)
+                row.createCell(0).apply { setCellValue(w.budynek.ulica); cellStyle = styles.dane }
+                w.kwoty().forEachIndexed { i, v ->
+                    row.createCell(i + 1).apply { setCellValue(v); cellStyle = styles.kwota }
+                }
+            }
+
+            val razem = sheet.createRow(r)
+            razem.createCell(0).apply { setCellValue("Razem"); cellStyle = styles.dane }
+            dane.kwotyRazem().forEachIndexed { i, v ->
+                razem.createCell(i + 1).apply { setCellValue(v); cellStyle = styles.kwotaSuma }
+            }
+
+            sheet.setColumnWidth(0, 8000)
+            (1..9).forEach { sheet.setColumnWidth(it, 3200) }
+
+            plik.outputStream().use { wb.write(it) }
+            plik
+        }
+    }
+
+    /** Nazwa zakładki: bez znaków zabronionych, max 31 znaków, unikalna (to wywalało eksport). */
+    private fun unikalnaNazwa(ulica: String, uzyte: MutableSet<String>): String {
+        val baza = ulica.replace(Regex("[\\\\/?*\\[\\]:]"), "-").take(28).ifBlank { "Arkusz" }
+        var nazwa = baza
+        var n = 2
+        while (!uzyte.add(nazwa.lowercase())) nazwa = "$baza (${n++})"
+        return nazwa
     }
 
     // === Wiersz 1 pusty, wiersze 2-5: nagłówek tekstowy ===
@@ -316,19 +368,18 @@ class ExportToExcelUseCase {
             wrapText = wrap
         }
 
-        val headerBg = IndexedColors.GREY_25_PERCENT.index
 
         return ExcelStyles(
             naglowekTytul = baseStyle(font(bold = true, size = 11), borders = false),
             naglowekInfo = baseStyle(font(bold = false, size = 10), borders = false),
             naglowekGrupa = baseStyle(
                 font(bold = true, size = 10),
-                bg = headerBg,
+
                 hAlign = HorizontalAlignment.CENTER
             ),
             naglowekKolumna = baseStyle(
                 font(bold = true, size = 9),
-                bg = headerBg,
+
                 hAlign = HorizontalAlignment.CENTER,
                 wrap = true
             ),
@@ -338,7 +389,6 @@ class ExportToExcelUseCase {
             kwota = baseStyle(font(size = 9), hAlign = HorizontalAlignment.RIGHT, format = kwotaFmt),
             kwotaSuma = baseStyle(
                 font(bold = true, size = 9),
-                bg = IndexedColors.LIGHT_YELLOW.index,
                 hAlign = HorizontalAlignment.RIGHT,
                 format = kwotaFmt
             )

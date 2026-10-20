@@ -8,10 +8,11 @@ import kotlinx.coroutines.withContext
 import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynkiUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.DaneRaportu
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.DaneRaportuZbiorczego
-import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportToExcelUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportWszystkichBudynkowUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.FormatEksportu
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportZbiorczyUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.RaportExporter
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.ZapiszUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.domain.model.Budynek
@@ -29,7 +30,7 @@ class RaportViewModel(
     private val zapiszUstawieniaUseCase: ZapiszUstawieniaUseCase,
     private val generujRaportZbiorczyUseCase: GenerujRaportZbiorczyUseCase,
     private val generujRaportUseCase: GenerujRaportUseCase,
-    private val exportToExcelUseCase: ExportToExcelUseCase,
+    private val eksportery: Map<FormatEksportu, RaportExporter>,
     private val exportWszystkichBudynkowUseCase: ExportWszystkichBudynkowUseCase
 ) {
     enum class TypRaportu { POJEDYNCZY_BUDYNEK, ZBIORCZY_MIESIAC, WSZYSTKIE_BUDYNKI }
@@ -71,6 +72,16 @@ class RaportViewModel(
         nrFaktury = nr
         clearMessages()
     }
+
+    var formatEksportu by mutableStateOf(FormatEksportu.PDF)
+        private set
+
+    fun ustawFormat(format: FormatEksportu) {
+        formatEksportu = format
+        clearMessages()
+    }
+
+    private val eksporter get() = eksportery.getValue(formatEksportu)
 
     var typRaportu by mutableStateOf(TypRaportu.POJEDYNCZY_BUDYNEK)
         private set
@@ -190,23 +201,42 @@ class RaportViewModel(
         }
     }
 
-    fun exportExcel(folder: File) {
+    fun eksportuj(folder: File) {
         when (typRaportu) {
             TypRaportu.POJEDYNCZY_BUDYNEK -> exportJednego(folder)
-            TypRaportu.ZBIORCZY_MIESIAC -> { /* TODO: export zbiorczy do jednego pliku */ }
+            TypRaportu.ZBIORCZY_MIESIAC -> exportZbiorczy(folder)
             TypRaportu.WSZYSTKIE_BUDYNKI -> exportWszystkich(folder)
+        }
+    }
+
+    private fun exportZbiorczy(folder: File) {
+        val dane = daneRaportuZbiorczego ?: run { errorMessage = "Najpierw wygeneruj podgląd"; return }
+        val e = eksporter
+        scope.launch {
+            isLoading = true
+            errorMessage = null
+            successMessage = null
+            val plik = File(folder, "Zestawienie_${dane.miesiac}_${dane.rok}.${e.rozszerzenie}")
+            withContext(Dispatchers.IO) {
+                e.eksportujZbiorczy(dane, plik)
+                    .onSuccess { successMessage = "Zapisano: ${it.absolutePath}" }
+                    .onFailure { errorMessage = "Błąd eksportu: ${it.message}" }
+            }
+            isLoading = false
         }
     }
 
     private fun exportJednego(folder: File) {
         val dane = daneRaportu ?: run { errorMessage = "Najpierw wygeneruj podgląd"; return }
+        val e = eksporter                                                      // NOWE
         scope.launch {
             isLoading = true
             errorMessage = null
             successMessage = null
-            val nazwaPliku = "Raport_${dane.budynek.miasto}_${dane.miesiac}_${dane.rok}.xlsx".replace(" ", "_")
+            val nazwaPliku = "Raport_${dane.budynek.miasto}_${dane.miesiac}_${dane.rok}.${e.rozszerzenie}"
+                .replace(" ", "_")
             withContext(Dispatchers.IO) {
-                exportToExcelUseCase(dane, File(folder, nazwaPliku))
+                e.eksportuj(listOf(dane), File(folder, nazwaPliku))
                     .onSuccess { successMessage = "Zapisano: ${it.absolutePath}" }
                     .onFailure { errorMessage = "Błąd eksportu: ${it.message}" }
             }
@@ -220,7 +250,7 @@ class RaportViewModel(
             errorMessage = null
             successMessage = null
             withContext(Dispatchers.IO) {
-                exportWszystkichBudynkowUseCase(folder, wybranyRok, wybranyMiesiac)
+                exportWszystkichBudynkowUseCase(folder, wybranyRok, wybranyMiesiac, eksporter)
                     .onSuccess { successMessage = "Zapisano: ${it.absolutePath}" }
                     .onFailure { errorMessage = "Błąd eksportu: ${it.message}" }
             }

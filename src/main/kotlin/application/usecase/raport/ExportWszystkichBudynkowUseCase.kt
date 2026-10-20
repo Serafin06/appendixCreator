@@ -6,26 +6,21 @@ import java.io.File
 /** Eksportuje raport miesięczny do osobnych plików Excel dla każdego budynku */
 class ExportWszystkichBudynkowUseCase(
     private val pobierzBudynkiUseCase: PobierzBudynkiUseCase,
-    private val generujRaportUseCase: GenerujRaportUseCase,
-    private val exportToExcelUseCase: ExportToExcelUseCase
+    private val generujRaportUseCase: GenerujRaportUseCase
 ) {
-    operator fun invoke(folder: File, rok: Int, miesiac: Int): Result<File> {
-        return try {
-            val budynki = pobierzBudynkiUseCase().getOrElse { return Result.failure(it) }
+    operator fun invoke(folder: File, rok: Int, miesiac: Int, eksporter: RaportExporter): Result<File> = runCatching {
+        val raporty = mutableListOf<DaneRaportu>()
+        val bledy = mutableListOf<String>()
 
-            val raporty = budynki.mapNotNull { budynek ->
-                generujRaportUseCase(budynek.id, rok, miesiac).getOrNull()
-            }
-
-            if (raporty.isEmpty())
-                return Result.failure(IllegalStateException("Brak prac w wybranym okresie"))
-
-            val nazwaPliku = "Raport_${miesiac}_${rok}.xlsx"
-            val plik = File(folder, nazwaPliku)
-
-            exportToExcelUseCase.invokeMulti(raporty, plik)
-        } catch (e: Exception) {
-            Result.failure(e)
+        pobierzBudynkiUseCase().getOrThrow().forEach { b ->
+            generujRaportUseCase(b.id, rok, miesiac)
+                .onSuccess { raporty += it }
+                .onFailure { if (it !is BrakPracException) bledy += "${b.ulica}: ${it.message}" }
         }
+
+        check(bledy.isEmpty()) { "Nie wygenerowano budynków:\n" + bledy.joinToString("\n") }
+        check(raporty.isNotEmpty()) { "Brak prac w wybranym okresie" }
+
+        eksporter.eksportuj(raporty, File(folder, "Raport_${miesiac}_${rok}.${eksporter.rozszerzenie}")).getOrThrow()
     }
 }

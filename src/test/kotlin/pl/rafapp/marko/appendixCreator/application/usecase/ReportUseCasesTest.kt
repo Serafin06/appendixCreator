@@ -6,6 +6,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynkiUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.BrakPracException
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportZbiorczyUseCase
 import pl.rafapp.marko.appendixCreator.domain.model.Budynek
@@ -98,7 +99,7 @@ class ReportUseCasesTest {
         )
 
         assertIs<IllegalArgumentException>(useCase(2, 2026, 3).exceptionOrNull())
-        assertIs<IllegalStateException>(useCase(1, 2026, 3).exceptionOrNull())
+        assertIs<BrakPracException>(useCase(1, 2026, 3).exceptionOrNull())
     }
 
     @Test
@@ -213,5 +214,19 @@ class ReportUseCasesTest {
         val failure = IllegalStateException("database unavailable")
         buildings.failure = failure
         assertSame(failure, useCase(2026, 3).exceptionOrNull())
+    }
+
+    @Test
+    fun `aggregate report propagates real errors with building name instead of skipping`() {
+        val building = Budynek(id = 1, miasto = "Katowice", ulica = "Kwiatowa 1")
+        val buildings = FakeBudynekRepository(mutableListOf(building))
+        val works = FakePracaRepository().apply { failure = IllegalStateException("db error") }
+        val generator = GenerujRaportUseCase(buildings, works, FakeMaterialRepository(), FakeUstawieniaRepository())
+        val useCase = GenerujRaportZbiorczyUseCase(PobierzBudynkiUseCase(buildings), generator)
+
+        val error = useCase(2026, 3).exceptionOrNull()
+
+        assertIs<IllegalStateException>(error)
+        assertTrue(error.message!!.contains("Kwiatowa 1"))
     }
 }
