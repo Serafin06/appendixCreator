@@ -2,6 +2,7 @@ package pl.rafapp.marko.appendixCreator.application.usecase.raport
 
 import org.apache.poi.ss.usermodel.*
 import org.apache.poi.ss.util.CellRangeAddress
+import org.apache.poi.ss.util.RegionUtil
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
 import java.time.format.DateTimeFormatter
@@ -27,6 +28,7 @@ class ExportToExcelUseCase : RaportExporter {
             val lastDataRow = dodajWiersze(sheet, styles, dane)
             dodajSumowanie(sheet, styles, dane, lastDataRow)
             ustawSzerokosci(sheet)
+            ustawStrone(sheet)
 
             plik.outputStream().use { workbook.write(it) }
             workbook.close()
@@ -48,6 +50,7 @@ class ExportToExcelUseCase : RaportExporter {
                 val lastDataRow = dodajWiersze(sheet, styles, dane)
                 dodajSumowanie(sheet, styles, dane, lastDataRow)
                 ustawSzerokosci(sheet)
+                ustawStrone(sheet)
             }
             plik.outputStream().use { workbook.write(it) }
             workbook.close()
@@ -154,149 +157,92 @@ class ExportToExcelUseCase : RaportExporter {
 
     // === Wiersze 9-10: nagłówek tabeli (dwupoziomowy) ===
     private fun dodajNaglowekTabeli(sheet: Sheet, styles: ExcelStyles) {
-        // Row 9: grupy kolumn
         val row9 = sheet.createRow(8)
-        fun nagl(row: Row, col: Int, text: String) =
-            row.createCell(col).apply { setCellValue(text); cellStyle = styles.naglowekGrupa }
-
-        // Puste A-C (LP, Data, Usługa) - połączone w dół z row10 osobno
-        nagl(row9, 3, "Robocizna")
-        sheet.addMergedRegion(CellRangeAddress(8, 8, 3, 4))
-        nagl(row9, 5, "Materiał")
-        sheet.addMergedRegion(CellRangeAddress(8, 8, 5, 8))
-        nagl(row9, 9, "Koszt zakupu 8%")
-        sheet.addMergedRegion(CellRangeAddress(8, 9, 9, 9)) // J9:J10
-        nagl(row9, 10, "Transport/sprzęt")
-        sheet.addMergedRegion(CellRangeAddress(8, 8, 10, 12))
-        nagl(row9, 13, "Suma")
-        sheet.addMergedRegion(CellRangeAddress(8, 9, 13, 13)) // N9:N10
-
-        // Row 10: podkolumny
         val row10 = sheet.createRow(9)
+
+        fun nagl(col: Int, text: String, style: CellStyle = styles.naglowekGrupa) =
+            row9.createCell(col).apply { setCellValue(text); cellStyle = style }
         fun subnagl(col: Int, text: String) =
             row10.createCell(col).apply { setCellValue(text); cellStyle = styles.naglowekKolumna }
 
-        subnagl(0, "LP")
-        subnagl(1, "Data")
-        subnagl(2, "Usługa")
-        subnagl(3, "Ilość godzin")
-        subnagl(4, "Wartość")
-        subnagl(5, "Nazwa")
-        subnagl(6, "Ilość")
-        subnagl(7, "Jednostka")
-        subnagl(8, "Wartość")
-        // col 9 (J) - merged z row9
-        subnagl(10, "Nazwa")
-        subnagl(11, "Ilość")
-        subnagl(12, "Wartość")
-        // col 13 (N) - merged z row9
+        // wiersz 9: nagłówki grup i nagłówki scalane w dół
+        nagl(0, "LP", styles.naglowekKolumna)
+        nagl(1, "Data", styles.naglowekKolumna)
+        nagl(2, "Usługa", styles.naglowekKolumna)
+        nagl(3, "Robocizna")
+        nagl(5, "Materiał")
+        nagl(9, "Koszt zakupu 8%", styles.naglowekKolumna)
+        nagl(10, "Transport/sprzęt")
+        nagl(13, "Suma", styles.naglowekKolumna)
 
-        // LP/Data/Usługa w row9 mergujemy z row10
-        sheet.addMergedRegion(CellRangeAddress(8, 9, 0, 0))
-        sheet.addMergedRegion(CellRangeAddress(8, 9, 1, 1))
-        sheet.addMergedRegion(CellRangeAddress(8, 9, 2, 2))
-        row9.createCell(0).apply { setCellValue("LP"); cellStyle = styles.naglowekKolumna }
-        row9.createCell(1).apply { setCellValue("Data"); cellStyle = styles.naglowekKolumna }
-        row9.createCell(2).apply { setCellValue("Usługa"); cellStyle = styles.naglowekKolumna }
+        // wiersz 10: podkolumny
+        subnagl(3, "Ilość godzin"); subnagl(4, "Wartość")
+        subnagl(5, "Nazwa"); subnagl(6, "Ilość"); subnagl(7, "Jednostka"); subnagl(8, "Wartość")
+        subnagl(10, "Nazwa"); subnagl(11, "Ilość"); subnagl(12, "Wartość")
+
+        // puste komórki w obu wierszach, żeby ramka objęła cały scalony obszar
+        (0..13).forEach { c ->
+            if (row9.getCell(c) == null) row9.createCell(c).cellStyle = styles.naglowekGrupa
+            if (row10.getCell(c) == null) row10.createCell(c).cellStyle = styles.naglowekKolumna
+        }
+
+        // scalanie dopiero na końcu, gdy wszystkie komórki już istnieją
+        scal(sheet, 8, 8, 3, 4)    // Robocizna
+        scal(sheet, 8, 8, 5, 8)    // Materiał
+        scal(sheet, 8, 8, 10, 12)  // Transport/sprzęt
+        listOf(0, 1, 2, 9, 13).forEach { scal(sheet, 8, 9, it) }
     }
 
     // === Dane od wiersza 11 (index 10) ===
     // Każda praca zajmuje tyle wierszy ile ma materiałów (min. 1)
     // Zwraca indeks ostatniego wiersza danych (do SUM)
     private fun dodajWiersze(sheet: Sheet, styles: ExcelStyles, dane: DaneRaportu): Int {
-        var rowIdx = 10
-        var lp = 1
+        var r = 10
+        dane.wiersze.forEachIndexed { idx, w ->
+            val n = maxOf(w.materialy.size, 1)
+            val dojazd = w.kosztDojazdu > 0
+            val rows = (0 until n).map { sheet.createRow(r + it) }
 
-        dane.wiersze.forEach { wiersz ->
-            val materialyCount = maxOf(wiersz.materialy.size, 1)
+            fun tekst(row: Row, col: Int, v: String, st: CellStyle) =
+                row.createCell(col).apply { setCellValue(v); cellStyle = st }
+            fun liczba(row: Row, col: Int, v: Double, st: CellStyle) =
+                row.createCell(col).apply { setCellValue(v); cellStyle = st }
 
-            // Jeśli praca ma wiele materiałów - merguj komórki LP/Data/Usługa/Robocizna/Transport/Suma
-            val endRowIdx = rowIdx + materialyCount - 1
+            // kolumny scalone pionowo (wartość w pierwszym wierszu pracy)
+            val first = rows[0]
+            tekst(first, 0, (idx + 1).toString(), styles.srodekGora)
+            tekst(first, 1, w.data.format(formatData), styles.srodekGora)
+            tekst(first, 2, w.opis, styles.lewaDol)
+            tekst(first, 3, w.roboczogodziny.toString(), styles.srodekDol)
+            liczba(first, 4, w.kosztRobocizny, styles.prawaDol)
+            tekst(first, 10, if (dojazd) "dojazd" else "", styles.srodekDol)
+            tekst(first, 11, if (dojazd) "1" else "", styles.srodekDol)
+            if (dojazd) liczba(first, 12, w.kosztDojazdu, styles.prawaDol) else tekst(first, 12, "", styles.prawaDol)
+            liczba(first, 13, sumaPracy(w), styles.prawaDol)
+            listOf(0, 1, 2, 3, 4, 10, 11, 12, 13).forEach { scal(sheet, r, r + n - 1, it) }
 
-            val row = sheet.createRow(rowIdx)
-
-            fun cell(col: Int, value: Any?, style: CellStyle) =
-                row.createCell(col).apply {
-                    when (value) {
-                        is Double -> setCellValue(value)
-                        is String -> setCellValue(value)
-                        is Int -> setCellValue(value.toDouble())
-                        null -> setCellValue("")
-                    }
-                    cellStyle = style
-                }
-
-            cell(0, lp, styles.dane)
-            cell(1, wiersz.data.format(formatData), styles.dane)
-            cell(2, wiersz.opis, styles.daneWrap)
-            cell(3, wiersz.roboczogodziny, styles.liczba)
-            cell(4, wiersz.kosztRobocizny, styles.kwota)
-
-            // Transport/sprzęt (dojazd) w kolumnach K-M
-            if (wiersz.kosztDojazdu > 0) {
-                cell(10, "dojazd", styles.dane)
-                cell(11, 1, styles.liczba)
-                cell(12, wiersz.kosztDojazdu, styles.kwota)
-            }
-
-            // Suma wiersza
-            val kosztMat = wiersz.materialy.sumOf { it.kosztCalkowity }
-            val vatMat = kosztMat * 0.08
-            val suma = wiersz.kosztRobocizny + wiersz.kosztDojazdu + kosztMat + vatMat
-            cell(13, suma, styles.kwotaSuma)
-
-            // VAT % w kolumnie P (index 15)
-            cell(15, wiersz.vat, styles.dane)
-
-            // Materiały
-            if (wiersz.materialy.isEmpty()) {
-                // Puste kolumny materiałów
-                listOf(5, 6, 7, 8, 9).forEach { col ->
-                    row.createCell(col).cellStyle = styles.dane
-                }
-            } else {
-                val m = wiersz.materialy[0]
-                cell(5, m.nazwa, styles.dane)
-                cell(6, m.ilosc, styles.liczba)
-                cell(7, m.jednostka, styles.dane)
-                cell(8, m.kosztCalkowity, styles.kwota)
-                cell(9, m.kosztCalkowity * 0.08, styles.kwota)
-            }
-
-            // Dodatkowe wiersze dla kolejnych materiałów
-            wiersz.materialy.drop(1).forEachIndexed { i, m ->
-                val extraRow = sheet.createRow(rowIdx + i + 1)
-                fun extraCell(col: Int, value: Any?, style: CellStyle) =
-                    extraRow.createCell(col).apply {
-                        when (value) {
-                            is Double -> setCellValue(value)
-                            is String -> setCellValue(value)
-                            null -> setCellValue("")
-                        }
-                        cellStyle = style
-                    }
-                extraCell(5, m.nazwa, styles.dane)
-                extraCell(6, m.ilosc, styles.liczba)
-                extraCell(7, m.jednostka, styles.dane)
-                extraCell(8, m.kosztCalkowity, styles.kwota)
-                extraCell(9, m.kosztCalkowity * 0.08, styles.kwota)
-            }
-
-            // Merguj komórki LP/Data/Usługa/robocizna/transport/suma jeśli >1 materiał
-            if (materialyCount > 1) {
-                listOf(0, 1, 2, 3, 4, 10, 11, 12, 13, 15).forEach { col ->
-                    if (sheet.getRow(rowIdx)?.getCell(col) != null || col in listOf(0,1,2,3,4,13,15)) {
-                        sheet.addMergedRegion(CellRangeAddress(rowIdx, endRowIdx, col, col))
-                    }
+            // materiały: po jednym wierszu
+            rows.forEachIndexed { i, row ->
+                val m = w.materialy.getOrNull(i)
+                tekst(row, 5, m?.nazwa ?: "", styles.lewaDol)
+                if (m != null) liczba(row, 6, m.ilosc, styles.srodekDol) else tekst(row, 6, "", styles.srodekDol)
+                tekst(row, 7, m?.jednostka ?: "", styles.srodekDol)
+                if (m != null) {
+                    liczba(row, 8, m.kosztCalkowity, styles.prawaDol)
+                    liczba(row, 9, m.kosztCalkowity * NARZUT_MATERIALOW, styles.prawaDol)
+                } else {
+                    tekst(row, 8, "", styles.prawaDol); tekst(row, 9, "", styles.prawaDol)
                 }
             }
-
-            rowIdx = endRowIdx + 1
-            lp++
+            r += n
         }
-
-        return rowIdx - 1 // ostatni wiersz danych (1-indexed: rowIdx)
+        return r - 1
     }
+
+    private fun sumaPracy(w: WierszRaportu) =
+        w.kosztRobocizny + w.kosztDojazdu + w.materialy.sumOf { it.kosztCalkowity } * (1 + NARZUT_MATERIALOW)
+
+    private companion object { const val NARZUT_MATERIALOW = 0.08 }
 
     // === Wiersz sumy pod tabelą ===
     private fun dodajSumowanie(sheet: Sheet, styles: ExcelStyles, dane: DaneRaportu, lastDataRowIdx: Int) {
@@ -336,11 +282,9 @@ class ExportToExcelUseCase : RaportExporter {
         val fmt = workbook.createDataFormat()
         val kwotaFmt = fmt.getFormat("#,##0.00")
 
-        fun font(bold: Boolean = false, size: Short = 10) =
-            workbook.createFont().apply {
-                this.bold = bold
-                fontHeightInPoints = size
-            }
+
+        fun font(bold: Boolean = false, size: Short = 8) =
+            workbook.createFont().apply { fontHeightInPoints = 8 } // bez pogrubień, jak w PDF
 
         fun baseStyle(
             font: Font? = null,
@@ -390,9 +334,33 @@ class ExportToExcelUseCase : RaportExporter {
             kwotaSuma = baseStyle(
                 font(bold = true, size = 9),
                 hAlign = HorizontalAlignment.RIGHT,
+                vAlign = VerticalAlignment.BOTTOM,
                 format = kwotaFmt
-            )
+            ),
+            srodekGora = baseStyle(font(), hAlign = HorizontalAlignment.CENTER, vAlign = VerticalAlignment.TOP),
+            lewaDol = baseStyle(font(), vAlign = VerticalAlignment.BOTTOM, wrap = true),
+            srodekDol = baseStyle(font(), hAlign = HorizontalAlignment.CENTER, vAlign = VerticalAlignment.BOTTOM, wrap = true),
+            prawaDol = baseStyle(font(), hAlign = HorizontalAlignment.RIGHT, vAlign = VerticalAlignment.BOTTOM, format = kwotaFmt)
         )
+    }
+
+    /** Scala zakres i rysuje ramkę wokół całego obszaru (POI sam tego nie robi). */
+    private fun scal(sheet: Sheet, r1: Int, r2: Int, c1: Int, c2: Int = c1) {
+        if (r1 == r2 && c1 == c2) return
+        val reg = CellRangeAddress(r1, r2, c1, c2)
+        sheet.addMergedRegion(reg)
+        RegionUtil.setBorderTop(BorderStyle.THIN, reg, sheet)
+        RegionUtil.setBorderBottom(BorderStyle.THIN, reg, sheet)
+        RegionUtil.setBorderLeft(BorderStyle.THIN, reg, sheet)
+        RegionUtil.setBorderRight(BorderStyle.THIN, reg, sheet)
+    }
+
+    private fun ustawStrone(sheet: Sheet) {
+        sheet.printSetup.apply { landscape = true; paperSize = PrintSetup.A4_PAPERSIZE; fitWidth = 1; fitHeight = 0 }
+        sheet.fitToPage = true
+        sheet.setMargin(Sheet.LeftMargin, 0.28); sheet.setMargin(Sheet.RightMargin, 0.28)
+        sheet.setMargin(Sheet.TopMargin, 0.28); sheet.setMargin(Sheet.BottomMargin, 0.28)
+        sheet.setRepeatingRows(CellRangeAddress(8, 9, -1, -1))
     }
 }
 
@@ -405,5 +373,9 @@ data class ExcelStyles(
     val daneWrap: CellStyle,
     val liczba: CellStyle,
     val kwota: CellStyle,
-    val kwotaSuma: CellStyle
+    val kwotaSuma: CellStyle,
+    val srodekGora: CellStyle,
+    val lewaDol: CellStyle,
+    val srodekDol: CellStyle,
+    val prawaDol: CellStyle
 )
