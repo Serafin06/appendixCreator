@@ -88,7 +88,12 @@ class ExportToPdfUseCase : RaportExporter {
             "Kalkulacja kosztów czynności wykonanych przez F.H.U. Marko Marek Grabowski",
             "Dotyczy ul. ${dane.budynek.ulica}",
             "Stawka roboczogodziny ${dane.stawkaRoboczogodziny.toInt()} zł"
-        ).forEach{ doc.add(Paragraph(it, font).apply { alignment = Element.ALIGN_CENTER }) }
+        ).forEach {
+            doc.add(Paragraph(it, font).apply {
+                alignment = Element.ALIGN_LEFT // Wyrównanie tekstu do lewej
+                indentationLeft = 275f // Przesunięcie całego bloku w prawo (wartość w punktach, dostosuj do potrzeb)
+            })
+        }
         doc.add(Paragraph(" ", font))
     }
 
