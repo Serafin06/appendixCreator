@@ -38,7 +38,7 @@ class ExportToPdfUseCase : RaportExporter {
     }
 
     // proporcje kolumn A-N jak we wzorze
-    private val szerokosci = floatArrayOf(3.3f, 13.3f, 39.7f, 6.4f, 7.9f, 20.4f, 4.9f, 9.6f, 7.9f, 7.4f, 9.3f, 4.9f, 7.9f, 8.9f)
+    private val szerokosci = floatArrayOf(3.3f, 13.3f, 39.7f, 6.4f, 7.9f, 20.4f, 4.9f, 9.6f, 7.9f, 7.4f, 9.3f, 4.9f, 7.9f, 8.9f, 5.0f)
 
     override fun eksportuj(raporty: List<DaneRaportu>, plik: File): Result<File> = runCatching {
         plik.outputStream().use { out ->
@@ -114,6 +114,7 @@ class ExportToPdfUseCase : RaportExporter {
         t.addCell(c("Robocizna", colspan = 2)); t.addCell(c("Materiał", colspan = 4))
         t.addCell(c("Koszt zakupu 8%", rowspan = 2)); t.addCell(c("Transport/sprzęt", colspan = 3))
         t.addCell(c("Suma", rowspan = 2))
+        t.addCell(c("", rowspan = 2, ramka = false))
         listOf("Ilość godzin", "Wartość", "Nazwa", "Ilość", "Jednostka", "Wartość", "Nazwa", "Ilość", "Wartość")
             .forEach { t.addCell(c(it)) }
     }
@@ -144,6 +145,7 @@ class ExportToPdfUseCase : RaportExporter {
                 t.addCell(c(if (dojazd) "1" else "", rowspan = n,valign = Element.ALIGN_BOTTOM))
                 t.addCell(c(if (dojazd) kwota(w.kosztDojazdu) else "", valign = Element.ALIGN_BOTTOM, rowspan = n))
                 t.addCell(c(kwota(sumaPracy(w)), valign = Element.ALIGN_BOTTOM, rowspan = n))
+                t.addCell(c(if (w.vat == 23) "23%" else "", align = Element.ALIGN_RIGHT, rowspan = n, valign = Element.ALIGN_BOTTOM, ramka = false))
             }
         }
     }
@@ -151,6 +153,7 @@ class ExportToPdfUseCase : RaportExporter {
     private fun dodajSume(t: PdfPTable, dane: DaneRaportu) {
         t.addCell(c("", colspan = 13, ramka = false))
         t.addCell(c(kwota(dane.wiersze.sumOf { sumaPracy(it) }), valign = Element.ALIGN_BOTTOM))
+        t.addCell(c("", ramka = false))
     }
 
     private fun sumaPracy(w: WierszRaportu) =
