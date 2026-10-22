@@ -219,6 +219,11 @@ class ExportToExcelUseCase : RaportExporter {
             tekst(first, 11, if (dojazd) "1" else "", styles.srodekDol)
             if (dojazd) liczba(first, 12, w.kosztDojazdu, styles.prawaDol) else tekst(first, 12, "", styles.prawaDol)
             liczba(first, 13, sumaPracy(w), styles.prawaDol)
+            // informacja o stawce VAT poza tabelą (kol. P), tylko dla 23%
+            if (w.vat == 23) {
+                tekst(first, 14, "23%", styles.vat)
+                if (n > 1) sheet.addMergedRegion(CellRangeAddress(r, r + n - 1, 14, 14))
+            }
             listOf(0, 1, 2, 3, 4, 10, 11, 12, 13).forEach { scal(sheet, r, r + n - 1, it) }
 
             // materiały: po jednym wierszu
@@ -273,7 +278,8 @@ class ExportToExcelUseCase : RaportExporter {
             10 to 2390,  // K - Nazwa transp.
             11 to 1250,  // L - Ilość transp.
             12 to 2020,  // M - Wartość transp.
-            13 to 2275   // N - Suma
+            13 to 2275,   // N - Suma
+            14 to 2020  // O - stawka VAT 23
         )
         widths.forEach { (col, width) -> sheet.setColumnWidth(col, width) }
     }
@@ -340,7 +346,8 @@ class ExportToExcelUseCase : RaportExporter {
             srodekGora = baseStyle(font(), hAlign = HorizontalAlignment.CENTER, vAlign = VerticalAlignment.TOP),
             lewaDol = baseStyle(font(), vAlign = VerticalAlignment.BOTTOM, wrap = true),
             srodekDol = baseStyle(font(), hAlign = HorizontalAlignment.CENTER, vAlign = VerticalAlignment.BOTTOM, wrap = true),
-            prawaDol = baseStyle(font(), hAlign = HorizontalAlignment.RIGHT, vAlign = VerticalAlignment.BOTTOM, format = kwotaFmt)
+            prawaDol = baseStyle(font(), hAlign = HorizontalAlignment.RIGHT, vAlign = VerticalAlignment.BOTTOM, format = kwotaFmt),
+            vat = baseStyle(font(), hAlign = HorizontalAlignment.RIGHT, vAlign = VerticalAlignment.BOTTOM, borders = false)
         )
     }
 
@@ -362,6 +369,7 @@ class ExportToExcelUseCase : RaportExporter {
         sheet.setMargin(Sheet.TopMargin, 0.28); sheet.setMargin(Sheet.BottomMargin, 0.28)
         sheet.setRepeatingRows(CellRangeAddress(8, 9, -1, -1))
     }
+
 }
 
 data class ExcelStyles(
@@ -377,5 +385,6 @@ data class ExcelStyles(
     val srodekGora: CellStyle,
     val lewaDol: CellStyle,
     val srodekDol: CellStyle,
-    val prawaDol: CellStyle
+    val prawaDol: CellStyle,
+    val vat: CellStyle
 )
