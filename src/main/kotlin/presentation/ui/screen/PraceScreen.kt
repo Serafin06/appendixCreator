@@ -18,6 +18,9 @@ import pl.rafapp.marko.appendixCreator.presentation.viewmodel.BudynkiViewModel
 import pl.rafapp.marko.appendixCreator.presentation.viewmodel.PraceViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.Month
+import java.time.format.TextStyle
+import java.util.Locale
 
 /**
  * Ekran zarządzania pracami
@@ -85,7 +88,7 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Lista prac (${viewModel.prace.size})",
+                    "Lista prac (${viewModel.przefiltrowanePrace.size})",
                     style = MaterialTheme.typography.titleMedium
                 )
 
@@ -99,6 +102,8 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
                 }
             }
 
+            PraceFiltry(viewModel)
+
             // Lista prac
             if (viewModel.isLoading) {
                 Box(
@@ -107,7 +112,7 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
                 ) {
                     CircularProgressIndicator()
                 }
-            } else if (viewModel.prace.isEmpty()) {
+            } else if (viewModel.przefiltrowanePrace.isEmpty()) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -115,7 +120,7 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
                     )
                 ) {
                     Text(
-                        "Brak prac w bazie danych",
+                        "Brak prac w wybranym okresie",
                         modifier = Modifier.padding(32.dp),
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -125,7 +130,7 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(viewModel.prace) { praca ->
+                    items(viewModel.przefiltrowanePrace) { praca ->
                         PracaCard(
                             praca = praca,
                             budynek = viewModel.budynki.find { it.id == praca.budynekId },
@@ -185,7 +190,7 @@ fun PracaCard(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    if (praca.nrFaktury.isNullOrBlank()) {
+                    if (!praca.nrFaktury.isNullOrBlank()) {
                         Text(
                             "Faktura: ${praca.nrFaktury}",
                             style = MaterialTheme.typography.bodySmall,
@@ -266,6 +271,7 @@ fun PracaCard(
             }
         }
     }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -283,12 +289,16 @@ fun FormularzPracy(
     var czyDojazd by remember { mutableStateOf((pracaDoEdycji?.kosztDojazdu ?: 0.0) > 0) }
     var vat by remember { mutableStateOf(pracaDoEdycji?.vat ?: 23) }
     var nrFaktury by remember {
-        mutableStateOf(pracaDoEdycji?.nrFaktury ?: viewModel.sugerujNrFaktury())
+        mutableStateOf(pracaDoEdycji?.nrFaktury ?: viewModel.sugerujNrFaktury(wybranyBudynekId, data))
     }
     var wybraneMaterialy by remember {
         mutableStateOf(pracaDoEdycji?.materialy?.map { it.materialId to it.ilosc } ?: emptyList<Pair<Long, Double>>())
     }
     val isEditing = pracaDoEdycji != null
+
+    LaunchedEffect(wybranyBudynekId, data) {
+        if (!isEditing) nrFaktury = viewModel.sugerujNrFaktury(wybranyBudynekId, data)
+    }
 
     var pokazDodajBudynekDialog by remember { mutableStateOf(false) }
 
@@ -755,4 +765,84 @@ fun DodajBudynekDialog(
             TextButton(onClick = onDismiss) { Text("Anuluj") }
         }
     )
+}
+
+private fun nazwaMiesiaca(m: Int) =
+    Month.of(m).getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
+        .replaceFirstChar { it.uppercase() }
+
+/** Panel filtrów listy prac: miesiąc, rok i budynek. */
+@Composable
+fun PraceFiltry(viewModel: PraceViewModel) {
+    val okres = viewModel.wybranyOkres
+    val opcjeBudynkow = buildList<Pair<Long?, String>> {
+        add(null to "Wszystkie")
+        viewModel.budynkiWOkresie.forEach { add(it.id to it.displayNazwa()) }
+    }
+
+    Column(
+        modifier = Modifier.padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FiltrDropdown(
+                label = "Miesiąc",
+                wybrany = nazwaMiesiaca(okres.monthValue),
+                opcje = viewModel.dostepneMiesiace(okres.year).map { it to nazwaMiesiaca(it) },
+                onWybierz = viewModel::ustawMiesiac,
+                modifier = Modifier.weight(1f)
+            )
+            FiltrDropdown(
+                label = "Rok",
+                wybrany = okres.year.toString(),
+                opcje = viewModel.dostepneLata.map { it to it.toString() },
+                onWybierz = viewModel::ustawRok,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        FiltrDropdown(
+            label = "Budynek",
+            wybrany = opcjeBudynkow.find { it.first == viewModel.filtrBudynekId }?.second ?: "Wszystkie",
+            opcje = opcjeBudynkow,
+            onWybierz = viewModel::ustawFiltrBudynku,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+/** Generyczna lista rozwijana tylko do wyboru (read-only), używana przez filtry. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <T> FiltrDropdown(
+    label: String,
+    wybrany: String,
+    opcje: List<Pair<T, String>>,
+    onWybierz: (T) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var rozwiniety by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = rozwiniety,
+        onExpandedChange = { rozwiniety = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = wybrany,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = rozwiniety) },
+            modifier = Modifier.fillMaxWidth().menuAnchor(),
+            singleLine = true
+        )
+        ExposedDropdownMenu(expanded = rozwiniety, onDismissRequest = { rozwiniety = false }) {
+            opcje.forEach { (wartosc, tekst) ->
+                DropdownMenuItem(
+                    text = { Text(tekst) },
+                    onClick = { onWybierz(wartosc); rozwiniety = false }
+                )
+            }
+        }
+    }
 }

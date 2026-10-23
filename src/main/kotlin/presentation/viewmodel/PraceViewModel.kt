@@ -11,6 +11,7 @@ import pl.rafapp.marko.appendixCreator.application.usecase.praca.*
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.domain.model.*
 import java.time.LocalDate
+import java.time.YearMonth
 
 
 /**
@@ -46,10 +47,55 @@ class PraceViewModel(
     var successMessage by mutableStateOf<String?>(null)
         private set
 
+    var wybranyOkres by mutableStateOf(YearMonth.now())
+        private set
+
+    var filtrBudynekId by mutableStateOf<Long?>(null)
+        private set
+
     private val scope = CoroutineScope(Dispatchers.IO)
 
     init {
         zaladujDane()
+    }
+
+    // --- Filtrowanie: dostępne opcje wynikają wyłącznie z istniejących prac ---
+
+    val dostepneLata: List<Int>
+        get() = (prace.map { it.data.year } + YearMonth.now().year)
+            .distinct().sortedDescending()
+
+    fun dostepneMiesiace(rok: Int): List<Int> {
+        val teraz = YearMonth.now()
+        val zPrac = prace.filter { it.data.year == rok }.map { it.data.monthValue }
+        val biezacy = if (rok == teraz.year) listOf(teraz.monthValue) else emptyList()
+        return (zPrac + biezacy).distinct().sorted()
+    }
+
+    private val pracePoOkresie: List<Praca>
+        get() = prace.filter { YearMonth.from(it.data) == wybranyOkres }
+
+    /** Budynki, w których w wybranym miesiącu była praca */
+    val budynkiWOkresie: List<Budynek>
+        get() = budynki.filter { b -> pracePoOkresie.any { it.budynekId == b.id } }
+
+    val przefiltrowanePrace: List<Praca>
+        get() = pracePoOkresie.filter { filtrBudynekId == null || it.budynekId == filtrBudynekId }
+
+    fun ustawRok(rok: Int) {
+        val miesiace = dostepneMiesiace(rok)
+        val miesiac = wybranyOkres.monthValue.takeIf { it in miesiace } ?: miesiace.last()
+        wybranyOkres = YearMonth.of(rok, miesiac)
+        filtrBudynekId = null
+    }
+
+    fun ustawMiesiac(miesiac: Int) {
+        wybranyOkres = YearMonth.of(wybranyOkres.year, miesiac)
+        filtrBudynekId = null
+    }
+
+    fun ustawFiltrBudynku(id: Long?) {
+        filtrBudynekId = id
     }
 
     fun zaladujDane() {
@@ -155,13 +201,22 @@ class PraceViewModel(
         }
     }
 
-    fun sugerujNrFaktury(): String {
-        val rok = LocalDate.now().year
+    fun sugerujNrFaktury(budynekId: Long?, data: LocalDate): String {
+        val okres = YearMonth.from(data)
+
+        if (budynekId != null) {
+            prace.firstOrNull {
+                it.budynekId == budynekId &&
+                        YearMonth.from(it.data) == okres &&
+                        !it.nrFaktury.isNullOrBlank()
+            }?.nrFaktury?.let { return it }
+        }
+
+        val rok = data.year
         val maxNr = prace
-            .map { it.nrFaktury }
-            .mapNotNull { nr ->
-                nr?.split("/")?.firstOrNull()?.trim()?.toIntOrNull()
-            }
+            .mapNotNull { it.nrFaktury?.split("/") }
+            .filter { it.getOrNull(1)?.trim() == rok.toString() }
+            .mapNotNull { it[0].trim().toIntOrNull() }
             .maxOrNull() ?: 0
         return "${maxNr + 1}/$rok"
     }
