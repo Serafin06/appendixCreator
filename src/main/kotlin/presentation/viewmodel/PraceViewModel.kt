@@ -10,6 +10,7 @@ import pl.rafapp.marko.appendixCreator.application.usecase.material.PobierzMater
 import pl.rafapp.marko.appendixCreator.application.usecase.praca.*
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.domain.model.*
+import pl.rafapp.marko.appendixCreator.domain.service.NumeratorFaktur
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -54,6 +55,8 @@ class PraceViewModel(
         private set
 
     private val scope = CoroutineScope(Dispatchers.IO)
+
+    private val numerator = NumeratorFaktur()
 
     init {
         zaladujDane()
@@ -201,25 +204,8 @@ class PraceViewModel(
         }
     }
 
-    fun sugerujNrFaktury(budynekId: Long?, data: LocalDate): String {
-        val okres = YearMonth.from(data)
-
-        if (budynekId != null) {
-            prace.firstOrNull {
-                it.budynekId == budynekId &&
-                        YearMonth.from(it.data) == okres &&
-                        !it.nrFaktury.isNullOrBlank()
-            }?.nrFaktury?.let { return it }
-        }
-
-        val rok = data.year
-        val maxNr = prace
-            .mapNotNull { it.nrFaktury?.split("/") }
-            .filter { it.getOrNull(1)?.trim() == rok.toString() }
-            .mapNotNull { it[0].trim().toIntOrNull() }
-            .maxOrNull() ?: 0
-        return "${maxNr + 1}/$rok"
-    }
+    fun sugerujNrFaktury(budynekId: Long?, data: LocalDate): String =
+        numerator.sugeruj(prace, budynekId, data)
 
     fun clearMessages() {
         errorMessage = null

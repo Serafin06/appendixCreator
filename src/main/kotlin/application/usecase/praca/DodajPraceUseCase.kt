@@ -13,9 +13,12 @@ class DodajPraceUseCase(private val repository: PracaRepository) {
             require(praca.opis.isNotBlank()) { "Opis pracy nie może być pusty" }
             require(praca.roboczogodziny in 1..30) { "Godziny muszą być w zakresie 1-30" }
             require(praca.vat in listOf(8, 23)) { "VAT musi być 8% lub 23%" }
-            require(praca.kosztDojazdu >= 0) { "Koszt dojazdu nie może być ujemny" }
+            require(praca.kosztDojazdu.isFinite() && praca.kosztDojazdu >= 0) { "Koszt dojazdu nie może być ujemny" }
+            require(praca.materialy.all { it.ilosc.isFinite() && it.ilosc > 0 }) {
+                "Ilość materiału musi być większa od 0"
+            }
 
-            Result.success(repository.dodaj(praca))
+            Result.success(repository.dodaj(praca.copy(opis = praca.opis.trim())))
         } catch (e: Exception) {
             Result.failure(e)
         }

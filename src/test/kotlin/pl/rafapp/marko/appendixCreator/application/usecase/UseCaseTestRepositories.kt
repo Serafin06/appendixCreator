@@ -88,11 +88,14 @@ class FakePracaRepository(
     var failure: Exception? = null
     var updatedWork: Praca? = null
     var deletedId: Long? = null
+    var assignIds = false
+    private var nextId = 1L
 
     override fun dodaj(praca: Praca): Praca {
         throwIfFailed()
-        works += praca
-        return praca
+        val saved = if (assignIds) praca.copy(id = nextId++) else praca
+        works += saved
+        return saved
     }
 
     override fun pobierzWszystkie(): List<Praca> {
