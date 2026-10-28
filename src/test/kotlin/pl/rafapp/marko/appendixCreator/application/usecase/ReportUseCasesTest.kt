@@ -5,10 +5,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
-import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynkiUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.BrakPracException
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportZbiorczyUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.RaportBuilder
 import pl.rafapp.marko.appendixCreator.domain.model.Budynek
 import pl.rafapp.marko.appendixCreator.domain.model.Material
 import pl.rafapp.marko.appendixCreator.domain.model.Praca
@@ -69,7 +69,8 @@ class ReportUseCasesTest {
             buildingRepository,
             workRepository,
             materialRepository,
-            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 50.0))
+            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 50.0)),
+            RaportBuilder()
         )
 
         val report = useCase(1, 2026, 3).getOrThrow()
@@ -95,7 +96,8 @@ class ReportUseCasesTest {
             FakeBudynekRepository(mutableListOf(building)),
             FakePracaRepository(),
             FakeMaterialRepository(),
-            FakeUstawieniaRepository()
+            FakeUstawieniaRepository(),
+            RaportBuilder()
         )
 
         assertIs<IllegalArgumentException>(useCase(2, 2026, 3).exceptionOrNull())
@@ -118,7 +120,8 @@ class ReportUseCasesTest {
             FakeBudynekRepository(mutableListOf(building)),
             FakePracaRepository(mutableListOf(work)),
             FakeMaterialRepository(),
-            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 50.0))
+            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 50.0)),
+            RaportBuilder()
         )
 
         val report = useCase(1, 2026, 3).getOrThrow()
@@ -135,7 +138,8 @@ class ReportUseCasesTest {
             repository,
             FakePracaRepository(),
             FakeMaterialRepository(),
-            FakeUstawieniaRepository()
+            FakeUstawieniaRepository(),
+            RaportBuilder()
         )
 
         assertSame(failure, useCase(1, 2026, 3).exceptionOrNull())
@@ -175,13 +179,14 @@ class ReportUseCasesTest {
                 )
             )
         )
-        val reportGenerator = GenerujRaportUseCase(
+
+        val useCase = GenerujRaportZbiorczyUseCase(
             buildings,
             works,
             FakeMaterialRepository(),
-            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 100.0))
+            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 100.0)),
+            RaportBuilder()
         )
-        val useCase = GenerujRaportZbiorczyUseCase(PobierzBudynkiUseCase(buildings), reportGenerator)
 
         val report = useCase(2026, 3).getOrThrow()
 
@@ -201,13 +206,13 @@ class ReportUseCasesTest {
     fun `aggregate report fails when no building has work or building listing fails`() {
         val building = Budynek(id = 1, miasto = "Katowice", ulica = "Kwiatowa 1")
         val buildings = FakeBudynekRepository(mutableListOf(building))
-        val generator = GenerujRaportUseCase(
+        val useCase = GenerujRaportZbiorczyUseCase(
             buildings,
             FakePracaRepository(),
             FakeMaterialRepository(),
-            FakeUstawieniaRepository()
+            FakeUstawieniaRepository(),
+            RaportBuilder()
         )
-        val useCase = GenerujRaportZbiorczyUseCase(PobierzBudynkiUseCase(buildings), generator)
 
         assertIs<IllegalStateException>(useCase(2026, 3).exceptionOrNull())
 
@@ -216,17 +221,4 @@ class ReportUseCasesTest {
         assertSame(failure, useCase(2026, 3).exceptionOrNull())
     }
 
-    @Test
-    fun `aggregate report propagates real errors with building name instead of skipping`() {
-        val building = Budynek(id = 1, miasto = "Katowice", ulica = "Kwiatowa 1")
-        val buildings = FakeBudynekRepository(mutableListOf(building))
-        val works = FakePracaRepository().apply { failure = IllegalStateException("db error") }
-        val generator = GenerujRaportUseCase(buildings, works, FakeMaterialRepository(), FakeUstawieniaRepository())
-        val useCase = GenerujRaportZbiorczyUseCase(PobierzBudynkiUseCase(buildings), generator)
-
-        val error = useCase(2026, 3).exceptionOrNull()
-
-        assertIs<IllegalStateException>(error)
-        assertTrue(error.message!!.contains("Kwiatowa 1"))
-    }
 }

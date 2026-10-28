@@ -5,6 +5,7 @@ import pl.rafapp.marko.appendixCreator.config.DatabaseConfig
 import pl.rafapp.marko.appendixCreator.data.entity.PracaEntity
 import pl.rafapp.marko.appendixCreator.domain.model.Praca
 import pl.rafapp.marko.appendixCreator.domain.repository.PracaRepository
+import java.time.LocalDate
 
 /**
  * Implementacja repozytorium prac
@@ -60,6 +61,21 @@ class PracaRepositoryImpl : PracaRepository {
             """.trimIndent(),
             PracaEntity::class.java
         ).setParameter("budynekId", budynekId)
+            .resultList
+            .map { it.toDomain() }
+    }
+
+    override fun pobierzZOkresu(od: LocalDate, koniec: LocalDate): List<Praca> = useSession { session ->
+        session.createQuery(
+            """
+        SELECT DISTINCT p FROM PracaEntity p
+        LEFT JOIN FETCH p.materialy
+        WHERE p.data >= :od AND p.data < :koniec
+        ORDER BY p.data
+        """.trimIndent(),
+            PracaEntity::class.java
+        ).setParameter("od", od)
+            .setParameter("koniec", koniec)
             .resultList
             .map { it.toDomain() }
     }

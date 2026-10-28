@@ -1,7 +1,6 @@
 package pl.rafapp.marko.appendixCreator.application.usecase
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynkiUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.*
 import pl.rafapp.marko.appendixCreator.domain.model.Budynek
 import pl.rafapp.marko.appendixCreator.domain.model.Praca
@@ -34,19 +33,22 @@ class ExportUseCasesTest {
         kosztDojazdu = 25.0, vat = 8, budynekId = budynekId
     )
 
-    private fun raport(budynek: Budynek): DaneRaportu =
+    private fun raport(budynek: Budynek, prace: List<Praca> = listOf(praca(budynek.id))): DaneRaportu =
         GenerujRaportUseCase(
             FakeBudynekRepository(mutableListOf(budynek)),
-            FakePracaRepository(mutableListOf(praca(budynek.id))),
+            FakePracaRepository(prace.toMutableList()),
             FakeMaterialRepository(),
-            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 50.0))
+            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 50.0)),
+            RaportBuilder()
         )(budynek.id, 2026, 3).getOrThrow()
 
-    private fun exportAll(budynki: List<Budynek>, prace: FakePracaRepository, exporter: RaportExporter): Result<File> {
-        val repo = FakeBudynekRepository(budynki.toMutableList())
-        val generator = GenerujRaportUseCase(repo, prace, FakeMaterialRepository(),
-            FakeUstawieniaRepository(Ustawienia(stawkaRoboczogodziny = 50.0)))
-        return ExportWszystkichBudynkowUseCase(PobierzBudynkiUseCase(repo), generator)(folder, 2026, 3, exporter)
+    private fun exportAll(budynki: List<Budynek>, prace: List<Praca>, exporter: RaportExporter): Result<File> {
+        val raporty = budynki.mapNotNull { b ->
+            val pracyBudynku = prace.filter { it.budynekId == b.id }
+            if (pracyBudynku.isEmpty()) null
+            else raport(b, pracyBudynku)
+        }
+        return ExportWszystkichBudynkowUseCase()(folder, raporty, 2026, 3, exporter)
     }
 
     @Test
@@ -55,29 +57,17 @@ class ExportUseCasesTest {
         val b2 = Budynek(id = 2, miasto = "Gliwice", ulica = "Lipowa 2") // bez prac
         val exporter = FakeRaportExporter("pdf")
 
-        val result = exportAll(listOf(b1, b2), FakePracaRepository(mutableListOf(praca(1))), exporter)
+        val result = exportAll(listOf(b1, b2), listOf(praca(1)), exporter)
 
         assertEquals("Raport_3_2026.pdf", result.getOrThrow().name)
         assertEquals(listOf(b1), exporter.otrzymane!!.map { it.budynek })
     }
 
     @Test
-    fun `export all fails with building name when a real error occurs`() {
-        val b1 = Budynek(id = 1, miasto = "Katowice", ulica = "Kwiatowa 1")
-        val prace = FakePracaRepository().apply { failure = IllegalStateException("db error") }
-        val exporter = FakeRaportExporter()
-
-        val error = exportAll(listOf(b1), prace, exporter).exceptionOrNull()
-
-        assertTrue(error!!.message!!.contains("Kwiatowa 1"))
-        assertNull(exporter.otrzymane) // nic nie wyeksportowano
-    }
-
-    @Test
     fun `export all fails when there is no work in period`() {
         val b1 = Budynek(id = 1, miasto = "Katowice", ulica = "Kwiatowa 1")
 
-        val error = exportAll(listOf(b1), FakePracaRepository(), FakeRaportExporter()).exceptionOrNull()
+        val error = exportAll(listOf(b1), emptyList(), FakeRaportExporter()).exceptionOrNull()
 
         assertIs<IllegalStateException>(error)
     }

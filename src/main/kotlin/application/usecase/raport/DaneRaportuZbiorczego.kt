@@ -27,5 +27,6 @@ data class DaneRaportuZbiorczego(
     val lacznaBrutto23: Double,
     val sumaNetto: Double,
     val sumaVat: Double,
-    val sumaBrutto: Double
+    val sumaBrutto: Double,
+    val raporty: List<DaneRaportu> // tylko do eksportu, nie wyświetlane w UI
 )

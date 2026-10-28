@@ -17,6 +17,7 @@ import pl.rafapp.marko.appendixCreator.application.usecase.raport.ExportWszystki
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.FormatEksportu
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.GenerujRaportZbiorczyUseCase
+import pl.rafapp.marko.appendixCreator.application.usecase.raport.RaportBuilder
 import pl.rafapp.marko.appendixCreator.application.usecase.raport.RaportExporter
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.PobierzUstawieniaUseCase
 import pl.rafapp.marko.appendixCreator.application.usecase.ustawienia.ZapiszUstawieniaUseCase
@@ -39,6 +40,8 @@ class DependencyContainer {
     private val materialRepository = MaterialRepositoryImpl()
     private val pracaRepository = PracaRepositoryImpl()
     private val ustawieniaRepository = UstawieniaRepositoryImpl()
+    private val raportBuilder = RaportBuilder()
+
 
     // Use Cases - Ustawienia
     val pobierzUstawieniaUseCase = PobierzUstawieniaUseCase(ustawieniaRepository)
@@ -49,7 +52,8 @@ class DependencyContainer {
         budynekRepository,
         pracaRepository,
         materialRepository,
-        ustawieniaRepository
+        ustawieniaRepository,
+        raportBuilder
     )
     val exportToExcelUseCase = ExportToExcelUseCase()
 
@@ -77,13 +81,13 @@ class DependencyContainer {
     val edytujPraceUseCase = EdytujPraceUseCase(pracaRepository)
 
     val generujRaportZbiorczyUseCase = GenerujRaportZbiorczyUseCase(
-        pobierzBudynkiUseCase,
-        generujRaportUseCase
+        budynekRepository,
+        pracaRepository,
+        materialRepository,
+        ustawieniaRepository,
+        raportBuilder
     )
-    val exportWszystkichBudynkowUseCase = ExportWszystkichBudynkowUseCase(
-        pobierzBudynkiUseCase,
-        generujRaportUseCase
-    )
+    val exportWszystkichBudynkowUseCase = ExportWszystkichBudynkowUseCase()
 
     // ViewModels
     fun createBudynkiViewModel() = BudynkiViewModel(

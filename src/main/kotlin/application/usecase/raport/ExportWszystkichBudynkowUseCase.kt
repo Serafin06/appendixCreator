@@ -4,23 +4,17 @@ import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynk
 import java.io.File
 
 /** Eksportuje raport miesięczny do osobnych plików Excel dla każdego budynku */
-class ExportWszystkichBudynkowUseCase(
-    private val pobierzBudynkiUseCase: PobierzBudynkiUseCase,
-    private val generujRaportUseCase: GenerujRaportUseCase
-) {
-    operator fun invoke(folder: File, rok: Int, miesiac: Int, eksporter: RaportExporter): Result<File> = runCatching {
-        val raporty = mutableListOf<DaneRaportu>()
-        val bledy = mutableListOf<String>()
-
-        pobierzBudynkiUseCase().getOrThrow().forEach { b ->
-            generujRaportUseCase(b.id, rok, miesiac)
-                .onSuccess { raporty += it }
-                .onFailure { if (it !is BrakPracException) bledy += "${b.ulica}: ${it.message}" }
-        }
-
-        check(bledy.isEmpty()) { "Nie wygenerowano budynków:\n" + bledy.joinToString("\n") }
+/** Eksportuje gotowe raporty wszystkich budynków do jednego pliku */
+class ExportWszystkichBudynkowUseCase {
+    operator fun invoke(
+        folder: File,
+        raporty: List<DaneRaportu>,
+        rok: Int,
+        miesiac: Int,
+        eksporter: RaportExporter
+    ): Result<File> = runCatching {
         check(raporty.isNotEmpty()) { "Brak prac w wybranym okresie" }
-
-        eksporter.eksportuj(raporty, File(folder, "Raport_${miesiac}_${rok}.${eksporter.rozszerzenie}")).getOrThrow()
+        val plik = File(folder, "Raport_${miesiac}_${rok}.${eksporter.rozszerzenie}")
+        eksporter.eksportuj(raporty, plik).getOrThrow()
     }
 }

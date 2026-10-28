@@ -123,12 +123,14 @@ class RaportViewModel(
     fun ustawRok(rok: Int) {
         wybranyRok = rok
         daneRaportu = null
+        daneRaportuZbiorczego = null
         clearMessages()
     }
 
     fun ustawMiesiac(miesiac: Int) {
         wybranyMiesiac = miesiac
         daneRaportu = null
+        daneRaportuZbiorczego = null
         clearMessages()
     }
 
@@ -227,7 +229,7 @@ class RaportViewModel(
     }
 
     private fun exportJednego(folder: File) {
-        val dane = daneRaportu ?: run { errorMessage = "Najpierw wygeneruj podgląd"; return }
+        val dane = (daneRaportu ?: run { errorMessage = "Najpierw wygeneruj podgląd"; return }).zNumerem(nrFaktury)
         val e = eksporter                                                      // NOWE
         scope.launch {
             isLoading = true
@@ -245,18 +247,24 @@ class RaportViewModel(
     }
 
     private fun exportWszystkich(folder: File) {
+        val dane = daneRaportuZbiorczego ?: run { errorMessage = "Najpierw wygeneruj podgląd"; return }
+        val raporty = dane.raporty.map { it.zNumerem(nrFaktury) }
         scope.launch {
             isLoading = true
             errorMessage = null
             successMessage = null
             withContext(Dispatchers.IO) {
-                exportWszystkichBudynkowUseCase(folder, wybranyRok, wybranyMiesiac, eksporter)
+                exportWszystkichBudynkowUseCase(folder, raporty, wybranyRok, wybranyMiesiac, eksporter)
                     .onSuccess { successMessage = "Zapisano: ${it.absolutePath}" }
                     .onFailure { errorMessage = "Błąd eksportu: ${it.message}" }
             }
             isLoading = false
         }
     }
+
+    private fun DaneRaportu.zNumerem(nr: String) =
+        if (nr.isBlank()) this else copy(numerFaktury = nr)
+
     fun clearMessages() {
         errorMessage = null
         successMessage = null

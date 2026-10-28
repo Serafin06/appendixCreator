@@ -9,4 +9,5 @@ interface PracaRepository {
     fun pobierzDlaBudynku(budynekId: Long): List<Praca>
     fun aktualizuj(praca: Praca): Praca
     fun usun(id: Long)
+    fun pobierzZOkresu(od: java.time.LocalDate, koniec: java.time.LocalDate): List<Praca>
 }

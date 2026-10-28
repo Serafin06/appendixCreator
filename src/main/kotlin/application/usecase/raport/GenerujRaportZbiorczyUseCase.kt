@@ -1,40 +1,47 @@
 package pl.rafapp.marko.appendixCreator.application.usecase.raport
 
-import pl.rafapp.marko.appendixCreator.application.usecase.budynek.PobierzBudynkiUseCase
+import pl.rafapp.marko.appendixCreator.domain.repository.BudynekRepository
+import pl.rafapp.marko.appendixCreator.domain.repository.MaterialRepository
+import pl.rafapp.marko.appendixCreator.domain.repository.PracaRepository
+import pl.rafapp.marko.appendixCreator.domain.repository.UstawieniaRepository
+import java.time.LocalDate
 
 /** Generuje zbiorczy raport miesięczny dla wszystkich budynków z podziałem na stawki VAT */
 class GenerujRaportZbiorczyUseCase(
-    private val pobierzBudynkiUseCase: PobierzBudynkiUseCase,
-    private val generujRaportUseCase: GenerujRaportUseCase
+    private val budynekRepository: BudynekRepository,
+    private val pracaRepository: PracaRepository,
+    private val materialRepository: MaterialRepository,
+    private val ustawieniaRepository: UstawieniaRepository,
+    private val raportBuilder: RaportBuilder
 ) {
     operator fun invoke(rok: Int, miesiac: Int): Result<DaneRaportuZbiorczego> {
         return try {
-            val budynki = pobierzBudynkiUseCase().getOrElse { return Result.failure(it) }
+            val stawka = ustawieniaRepository.pobierz().stawkaRoboczogodziny
+            val materialy = materialRepository.pobierzWszystkie().associateBy { it.id }
+            val od = LocalDate.of(rok, miesiac, 1)
+            val pracePoBudynku = pracaRepository.pobierzZOkresu(od, od.plusMonths(1)).groupBy { it.budynekId }
 
-            val wiersze = budynki.mapNotNull { budynek ->
-                val dane = generujRaportUseCase(budynek.id, rok, miesiac).getOrElse {
-                    if (it is BrakPracException) return@mapNotNull null
-                    throw IllegalStateException("${budynek.ulica}: ${it.message}", it)
-                }
-                    val w8 = dane.wiersze.filter { it.vat == 8 }
-                    val w23 = dane.wiersze.filter { it.vat == 23 }
-                    WierszBudynkuZbiorczy(
-                        budynek = budynek,
-                        nettoVat8 = w8.sumOf { it.kosztNetto },
-                        vatKwota8 = w8.sumOf { it.kosztBrutto - it.kosztNetto },
-                        bruttoVat8 = w8.sumOf { it.kosztBrutto },
-                        nettoVat23 = w23.sumOf { it.kosztNetto },
-                        vatKwota23 = w23.sumOf { it.kosztBrutto - it.kosztNetto },
-                        bruttoVat23 = w23.sumOf { it.kosztBrutto },
-                        sumaNetto = dane.sumaNetto,
-                        sumaVat = dane.sumaVat,
-                        sumaBrutto = dane.sumaBrutto
-                    )
-
+            val raporty = budynekRepository.pobierzWszystkie().mapNotNull { b ->
+                pracePoBudynku[b.id]?.let { raportBuilder.zbuduj(b, it, materialy, stawka, rok, miesiac) }
             }.filter { it.sumaNetto > 0 }
 
-            if (wiersze.isEmpty())
+            if (raporty.isEmpty())
                 return Result.failure(IllegalStateException("Brak prac w wybranym okresie"))
+
+            val wiersze = raporty.map { dane ->
+                val w8 = dane.wiersze.filter { it.vat == 8 }
+                val w23 = dane.wiersze.filter { it.vat == 23 }
+                WierszBudynkuZbiorczy(
+                    budynek = dane.budynek,
+                    nettoVat8 = w8.sumOf { it.kosztNetto },
+                    vatKwota8 = w8.sumOf { it.kosztBrutto - it.kosztNetto },
+                    bruttoVat8 = w8.sumOf { it.kosztBrutto },
+                    nettoVat23 = w23.sumOf { it.kosztNetto },
+                    vatKwota23 = w23.sumOf { it.kosztBrutto - it.kosztNetto },
+                    bruttoVat23 = w23.sumOf { it.kosztBrutto },
+                    sumaNetto = dane.sumaNetto, sumaVat = dane.sumaVat, sumaBrutto = dane.sumaBrutto
+                )
+            }
 
             Result.success(DaneRaportuZbiorczego(
                 rok = rok, miesiac = miesiac,
@@ -47,7 +54,8 @@ class GenerujRaportZbiorczyUseCase(
                 lacznaBrutto23 = wiersze.sumOf { it.bruttoVat23 },
                 sumaNetto = wiersze.sumOf { it.sumaNetto },
                 sumaVat = wiersze.sumOf { it.sumaVat },
-                sumaBrutto = wiersze.sumOf { it.sumaBrutto }
+                sumaBrutto = wiersze.sumOf { it.sumaBrutto },
+                raporty = raporty
             ))
         } catch (e: Exception) {
             Result.failure(e)

@@ -8,6 +8,7 @@ import pl.rafapp.marko.appendixCreator.domain.repository.BudynekRepository
 import pl.rafapp.marko.appendixCreator.domain.repository.MaterialRepository
 import pl.rafapp.marko.appendixCreator.domain.repository.PracaRepository
 import pl.rafapp.marko.appendixCreator.domain.repository.UstawieniaRepository
+import java.time.LocalDate
 
 class FakeBudynekRepository(
     val buildings: MutableList<Budynek> = mutableListOf()
@@ -112,6 +113,9 @@ class FakePracaRepository(
         throwIfFailed()
         return works.filter { it.budynekId == budynekId }
     }
+
+    override fun pobierzZOkresu(od: LocalDate, koniec: LocalDate): List<Praca> =
+        pobierzWszystkie().filter { !it.data.isBefore(od) && it.data.isBefore(koniec) }
 
     override fun aktualizuj(praca: Praca): Praca {
         throwIfFailed()
