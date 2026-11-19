@@ -23,6 +23,9 @@ import java.time.Month
 import java.time.ZoneOffset
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import pl.rafapp.marko.appendixCreator.presentation.viewmodel.MaterialyViewModel
 
 /**
  * Ekran zarządzania pracami
@@ -31,7 +34,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
+fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel, materialyViewModel: MaterialyViewModel) {
     var pokazFormularz by remember { mutableStateOf(false) }
     var pracaDoUsuniecia by remember { mutableStateOf<Praca?>(null) }
     var pracaDoEdycji by remember { mutableStateOf<Praca?>(null) }
@@ -42,6 +45,7 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
         FormularzPracy(
             viewModel = viewModel,
             budynkiViewModel = budynkiViewModel,
+            materialyViewModel = materialyViewModel,
             pracaDoEdycji = pracaDoEdycji,
             onClose = {
                 pokazFormularz = false
@@ -282,6 +286,7 @@ fun PracaCard(
 fun FormularzPracy(
     viewModel: PraceViewModel,
     budynkiViewModel: BudynkiViewModel,
+    materialyViewModel: MaterialyViewModel,
     pracaDoEdycji: Praca? = null,
     onClose: () -> Unit
 ) {
@@ -461,7 +466,6 @@ fun FormularzPracy(
 
                             Button(
                                 onClick = { pokazMaterialDialog = true },
-                                enabled = viewModel.materialy.isNotEmpty()
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null)
                                 Spacer(Modifier.width(4.dp))
@@ -590,97 +594,215 @@ fun FormularzPracy(
                 wybraneMaterialy = wybraneMaterialy.filter { it.first != materialId } + (materialId to ilosc)
                 pokazMaterialDialog = false
             },
+            onUtworz = { nazwa, jednostka, cena, onGotowe ->
+                materialyViewModel.dodajMaterial(nazwa, jednostka, cena) { nowy ->
+                    materialyViewModel.clearMessages()
+                    viewModel.zaladujDane()
+                    onGotowe(nowy)
+                }
+            },
+            onZmienCene = { material, cena, tylkoDlaPracy, onGotowe ->
+                if (tylkoDlaPracy) {
+                    // TODO: cena tylko dla tej pracy – wymaga pola cenaNadpisana w PracaMaterial,
+                    //  kolumny w PracaMaterialEntity oraz uwzględnienia w RaportBuilder
+                } else {
+                    materialyViewModel.aktualizujMaterial(material.id, material.nazwa, material.jednostka, cena) { zaktualizowany ->
+                        materialyViewModel.clearMessages()
+                        viewModel.zaladujDane()
+                        onGotowe(zaktualizowany)
+                    }
+                }
+            },
             onDismiss = { pokazMaterialDialog = false }
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Przełącznik checkboxa "tylko dla tej pracy". TODO: włączyć po dodaniu cenaNadpisana w PracaMaterial i bazie. */
+private const val CENA_TYLKO_DLA_PRACY_DOSTEPNA = false
+
+/** Tryby dialogu: szukanie/wybór materiału, tworzenie nowego, zmiana ceny wybranego. */
+private enum class TrybMaterialu { WYSZUKIWANIE, NOWY, ZMIANA_CENY }
+
+/**
+ * Dialog dodawania materiału do pracy. Wyszukiwanie z podpowiedziami pod polem (bez popupu),
+ * opcja "Dodaj materiał" (nazwa + jednostka z listy + cena) oraz "Zmień cenę" wybranego materiału.
+ * Nie zna ViewModeli - całość operacji na bazie przekazana przez callbacki.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DodajMaterialDialog(
     materialy: List<Material>,
     onDodaj: (Long, Double) -> Unit,
+    onUtworz: (nazwa: String, jednostka: String, cena: Double, onGotowe: (Material) -> Unit) -> Unit,
+    onZmienCene: (material: Material, cena: Double, tylkoDlaPracy: Boolean, onGotowe: (Material) -> Unit) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var wybranyMaterialId by remember { mutableStateOf<Long?>(null) }
+    var szukaj by remember { mutableStateOf("") }
+    var wybrany by remember { mutableStateOf<Material?>(null) }
+    var tryb by remember { mutableStateOf(TrybMaterialu.WYSZUKIWANIE) }
     var ilosc by remember { mutableStateOf("") }
-    var rozwiniety by remember { mutableStateOf(false) }
+    var jednostka by remember { mutableStateOf(Jednostki.DOSTEPNE.first()) }
+    var cena by remember { mutableStateOf("") }
+    var tylkoDlaPracy by remember { mutableStateOf(false) }
+
+    val tekst = szukaj.trim()
+    val szukamy = wybrany == null && tekst.isNotEmpty() && tryb == TrybMaterialu.WYSZUKIWANIE
+    val pasujace = if (szukamy) materialy.filter { it.nazwa.contains(tekst, ignoreCase = true) } else emptyList()
+    val jestDokladny = pasujace.any { it.nazwa.equals(tekst, ignoreCase = true) }
+    val cenaDouble = cena.replace(",", ".").toDoubleOrNull()
+    val iloscDouble = ilosc.replace(",", ".").toDoubleOrNull()
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Dodaj materiał") },
         text = {
-            Column {
-                ExposedDropdownMenuBox(
-                    expanded = rozwiniety,
-                    onExpandedChange = { rozwiniety = it }
-                ) {
-                    OutlinedTextField(
-                        value = materialy.find { it.id == wybranyMaterialId }?.nazwa ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Materiał") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = rozwiniety) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor(),
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                    )
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = szukaj,
+                    onValueChange = {
+                        szukaj = it
+                        wybrany = null
+                        tryb = TrybMaterialu.WYSZUKIWANIE
+                    },
+                    label = { Text("Materiał") },
+                    placeholder = { Text("Wpisz nazwę...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
 
-                    ExposedDropdownMenu(
-                        expanded = rozwiniety,
-                        onDismissRequest = { rozwiniety = false }
-                    ) {
-                        materialy.forEach { material ->
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(material.nazwa)
-                                        Text(
-                                            "${material.cenaZaJednostke} zł/${material.jednostka}",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    wybranyMaterialId = material.id
-                                    rozwiniety = false
-                                }
+                // Podpowiedzi + dodanie nowego
+                if (szukamy) {
+                    pasujace.take(5).forEach { m ->
+                        TextButton(
+                            onClick = { wybrany = m; szukaj = m.nazwa },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "${m.nazwa} (${String.format("%.2f", m.cenaZaJednostke)} zł/${m.jednostka})",
+                                modifier = Modifier.weight(1f)
                             )
+                        }
+                    }
+                    if (!jestDokladny) {
+                        TextButton(
+                            onClick = { cena = ""; tryb = TrybMaterialu.NOWY },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Dodaj materiał: $tekst", modifier = Modifier.weight(1f))
                         }
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                // Tworzenie nowego materiału
+                if (tryb == TrybMaterialu.NOWY) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Jednostka", style = MaterialTheme.typography.labelMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Jednostki.DOSTEPNE.forEach { j ->
+                            FilterChip(selected = jednostka == j, onClick = { jednostka = j }, label = { Text(j) })
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = cena,
+                        onValueChange = { cena = it },
+                        label = { Text("Cena za jednostkę (zł)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            onUtworz(tekst, jednostka, cenaDouble!!) { nowy ->
+                                wybrany = nowy
+                                szukaj = nowy.nazwa
+                                tryb = TrybMaterialu.WYSZUKIWANIE
+                            }
+                        },
+                        enabled = cenaDouble != null && cenaDouble >= 0,
+                        modifier = Modifier.align(Alignment.End)
+                    ) { Text("Utwórz materiał") }
+                }
 
-                OutlinedTextField(
-                    value = ilosc,
-                    onValueChange = { ilosc = it },
-                    label = {
-                        val jednostka = materialy.find { it.id == wybranyMaterialId }?.jednostka ?: "szt"
-                        Text("Ilość ($jednostka)")
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Wybrany materiał: cena + ilość
+                wybrany?.let { m ->
+                    if (tryb == TrybMaterialu.WYSZUKIWANIE) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${String.format("%.2f", m.cenaZaJednostke)} zł / ${m.jednostka}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            TextButton(onClick = {
+                                cena = String.format("%.2f", m.cenaZaJednostke)
+                                tylkoDlaPracy = false
+                                tryb = TrybMaterialu.ZMIANA_CENY
+                            }) { Text("Zmień cenę") }
+                        }
+                        OutlinedTextField(
+                            value = ilosc,
+                            onValueChange = { ilosc = it },
+                            label = { Text("Ilość (${m.jednostka})") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    // Zmiana ceny
+                    if (tryb == TrybMaterialu.ZMIANA_CENY) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = cena,
+                            onValueChange = { cena = it },
+                            label = { Text("Nowa cena za ${m.jednostka} (zł)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                        if (CENA_TYLKO_DLA_PRACY_DOSTEPNA) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = tylkoDlaPracy, onCheckedChange = { tylkoDlaPracy = it })
+                                Text("Tylko dla tej pracy", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                        ) {
+                            TextButton(onClick = { tryb = TrybMaterialu.WYSZUKIWANIE }) { Text("Anuluj") }
+                            Button(
+                                onClick = {
+                                    onZmienCene(m, cenaDouble!!, tylkoDlaPracy) { zaktualizowany ->
+                                        wybrany = zaktualizowany
+                                        tryb = TrybMaterialu.WYSZUKIWANIE
+                                    }
+                                },
+                                enabled = cenaDouble != null && cenaDouble >= 0
+                            ) { Text("Zapisz cenę") }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    val iloscDouble = ilosc.replace(",", ".").toDoubleOrNull()
-                    if (wybranyMaterialId != null && iloscDouble != null && iloscDouble > 0) {
-                        onDodaj(wybranyMaterialId!!, iloscDouble)
-                    }
-                },
-                enabled = wybranyMaterialId != null && ilosc.isNotBlank()
-            ) {
-                Text("Dodaj")
-            }
+                onClick = { onDodaj(wybrany!!.id, iloscDouble!!) },
+                enabled = wybrany != null &&
+                        tryb == TrybMaterialu.WYSZUKIWANIE &&
+                        iloscDouble != null && iloscDouble > 0
+            ) { Text("Dodaj") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Anuluj")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
     )
 }
 

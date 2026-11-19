@@ -29,7 +29,7 @@ fun App(container: DependencyContainer) {
         onTabSelected = { selectedTab = it }
     ) {
         when (selectedTab) {
-            0 -> PraceScreen(praceViewModel, budynkiViewModel)
+            0 -> PraceScreen(praceViewModel, budynkiViewModel, materialyViewModel)
             1 -> BudynkiScreen(budynkiViewModel)
             2 -> MaterialyScreen(materialyViewModel)
             3 -> RaportScreen(raportViewModel)  // DODAJ!

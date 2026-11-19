@@ -51,7 +51,7 @@ class MaterialyViewModel(
         }
     }
 
-    fun dodajMaterial(nazwa: String, jednostka: String, cena: Double) {
+    fun dodajMaterial(nazwa: String, jednostka: String, cena: Double, onSuccess: (Material) -> Unit = {}) {
         scope.launch {
             isLoading = true
             errorMessage = null
@@ -62,6 +62,7 @@ class MaterialyViewModel(
                     .onSuccess {
                         successMessage = "Dodano materiał: ${it.nazwa}"
                         zaladujMaterialy()
+                        onSuccess(it)
                     }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }
             }
@@ -69,7 +70,8 @@ class MaterialyViewModel(
             isLoading = false
         }
     }
-    fun aktualizujMaterial(id: Long, nazwa: String, jednostka: String, cena: Double) {
+
+    fun aktualizujMaterial(id: Long, nazwa: String, jednostka: String, cena: Double, onSuccess: (Material) -> Unit = {}) {
         scope.launch {
             isLoading = true
             errorMessage = null
@@ -80,6 +82,7 @@ class MaterialyViewModel(
                     .onSuccess {
                         successMessage = "Zaktualizowano materiał: ${it.nazwa}"
                         zaladujMaterialy()
+                        onSuccess(it)
                     }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }
             }

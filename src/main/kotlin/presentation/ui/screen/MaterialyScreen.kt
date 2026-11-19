@@ -31,6 +31,8 @@ fun MaterialyScreen(viewModel: MaterialyViewModel) {
     var materialDoEdycji by remember { mutableStateOf<Material?>(null) }
     var materialDoUsuniecia by remember { mutableStateOf<Material?>(null) }
 
+    LaunchedEffect(Unit) { viewModel.zaladujMaterialy() }
+
     if (pokazFormularz || materialDoEdycji != null) {
         FormularzMaterialu(
             viewModel = viewModel,
