@@ -36,6 +36,8 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
     var pracaDoUsuniecia by remember { mutableStateOf<Praca?>(null) }
     var pracaDoEdycji by remember { mutableStateOf<Praca?>(null) }
 
+    LaunchedEffect(Unit) { viewModel.zaladujDane() }
+
     if (pokazFormularz || pracaDoEdycji != null) {
         FormularzPracy(
             viewModel = viewModel,
@@ -95,7 +97,7 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
                 )
 
                 Button(
-                    onClick = { pokazFormularz = true },
+                    onClick = { viewModel.clearMessages(); pokazFormularz = true },
                     enabled = !viewModel.isLoading
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
@@ -138,7 +140,7 @@ fun PraceScreen(viewModel: PraceViewModel, budynkiViewModel: BudynkiViewModel) {
                             budynek = viewModel.budynki.find { it.id == praca.budynekId },
                             materialy = viewModel.materialy,
                             onDelete = { pracaDoUsuniecia = praca },
-                            onEdit = { pracaDoEdycji = praca }
+                            onEdit = { viewModel.clearMessages(); pracaDoEdycji = praca }
                         )
                     }
                 }
@@ -273,7 +275,6 @@ fun PracaCard(
             }
         }
     }
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -302,28 +303,8 @@ fun FormularzPracy(
         if (!isEditing) nrFaktury = viewModel.sugerujNrFaktury(wybranyBudynekId, data)
     }
 
-    var pokazDodajBudynekDialog by remember { mutableStateOf(false) }
-
     var pokazDatePicker by remember { mutableStateOf(false) }
     var pokazMaterialDialog by remember { mutableStateOf(false) }
-
-    if (pokazDatePicker) {
-        val state = rememberDatePickerState(
-            initialSelectedDateMillis = data.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-        )
-        DatePickerDialog(
-            onDismissRequest = { pokazDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    state.selectedDateMillis?.let {
-                        data = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
-                    }
-                    pokazDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = { TextButton(onClick = { pokazDatePicker = false }) { Text("Anuluj") } }
-        ) { DatePicker(state = state) }
-    }
 
     LaunchedEffect(viewModel.successMessage) {
         if (viewModel.successMessage != null) {
@@ -363,67 +344,18 @@ fun FormularzPracy(
                         Text("1. Wybierz budynek", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(8.dp))
 
-                        var szukaj by remember {
-                            mutableStateOf(viewModel.budynki.find { it.id == wybranyBudynekId }?.displayNazwa() ?: "")
-                        }
-                        var rozwiniety by remember { mutableStateOf(false) }
-
-                        val przefiltrowane = viewModel.budynki.filter {
-                            it.ulica.contains(szukaj, ignoreCase = true)
-                        }
-
-                        ExposedDropdownMenuBox(
-                            expanded = rozwiniety,
-                            onExpandedChange = { rozwiniety = it }
-                        ) {
-                            OutlinedTextField(
-                                value = szukaj,
-                                onValueChange = {
-                                    szukaj = it
-                                    rozwiniety = true
-                                    wybranyBudynekId = null
-                                },
-                                label = { Text("Budynek") },
-                                placeholder = { Text("Wpisz ulicę...") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = rozwiniety) },
-                                modifier = Modifier.fillMaxWidth().menuAnchor(),
-                                singleLine = true
-                            )
-
-                            ExposedDropdownMenu(
-                                expanded = rozwiniety,
-                                onDismissRequest = { rozwiniety = false }
-                            ) {
-                                przefiltrowane.forEach { budynek ->
-                                    DropdownMenuItem(
-                                        text = { Text(budynek.displayNazwa()) },
-                                        onClick = {
-                                            wybranyBudynekId = budynek.id
-                                            szukaj = budynek.displayNazwa()
-                                            rozwiniety = false
-                                        }
-                                    )
+                        WyborBudynku(
+                            budynki = viewModel.budynki,
+                            wybranyId = wybranyBudynekId,
+                            onWybierz = { wybranyBudynekId = it.id },
+                            onWyczysc = { wybranyBudynekId = null },
+                            onDodaj = { ulica ->
+                                budynkiViewModel.dodajBudynek("Katowice", ulica) { nowy ->
+                                    wybranyBudynekId = nowy.id
+                                    viewModel.zaladujDane()
                                 }
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.Add,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("Dodaj nowy budynek", color = MaterialTheme.colorScheme.primary)
-                                        }
-                                    },
-                                    onClick = {
-                                        rozwiniety = false
-                                        pokazDodajBudynekDialog = true
-                                    }
-                                )
                             }
-                        }
+                        )
                     }
                 }
             }
@@ -631,6 +563,25 @@ fun FormularzPracy(
         }
     }
 
+    // Dialog wyboru daty
+    if (pokazDatePicker) {
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = data.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { pokazDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let {
+                        data = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
+                    }
+                    pokazDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { pokazDatePicker = false }) { Text("Anuluj") } }
+        ) { DatePicker(state = state) }
+    }
+
     // Dialog dodawania materiału
     if (pokazMaterialDialog) {
         DodajMaterialDialog(
@@ -640,17 +591,6 @@ fun FormularzPracy(
                 pokazMaterialDialog = false
             },
             onDismiss = { pokazMaterialDialog = false }
-        )
-    }
-
-    if (pokazDodajBudynekDialog) {
-        DodajBudynekDialog(
-            onDodaj = { miasto, ulica ->
-                budynkiViewModel.dodajBudynek(miasto, ulica)
-                viewModel.zaladujDane()
-                pokazDodajBudynekDialog = false
-            },
-            onDismiss = { pokazDodajBudynekDialog = false }
         )
     }
 }
@@ -744,47 +684,50 @@ fun DodajMaterialDialog(
     )
 }
 
+/**
+ * Pole wyszukiwania budynku. Podpowiedzi oraz opcja "Dodaj budynek"
+ * wyświetlane są pod polem (bez popupu), dzięki czemu nie ma problemów z fokusem.
+ */
 @Composable
-fun DodajBudynekDialog(
-    onDodaj: (String, String) -> Unit,
-    onDismiss: () -> Unit
+fun WyborBudynku(
+    budynki: List<Budynek>,
+    wybranyId: Long?,
+    onWybierz: (Budynek) -> Unit,
+    onWyczysc: () -> Unit,
+    onDodaj: (String) -> Unit
 ) {
-    var miasto by remember { mutableStateOf("Katowice") }
-    var ulica by remember { mutableStateOf("") }
+    var szukaj by remember { mutableStateOf(budynki.find { it.id == wybranyId }?.displayNazwa() ?: "") }
+    val tekst = szukaj.trim()
+    val szukamy = wybranyId == null && tekst.isNotEmpty()
+    val pasujace = if (szukamy) budynki.filter { it.ulica.contains(tekst, ignoreCase = true) } else emptyList()
+    val jestDokladny = pasujace.any { it.ulica.equals(tekst, ignoreCase = true) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Dodaj nowy budynek") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = miasto,
-                    onValueChange = { miasto = it },
-                    label = { Text("Miasto") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = ulica,
-                    onValueChange = { ulica = it },
-                    label = { Text("Ulica") },
-                    placeholder = { Text("np. ul. Kwiatowa 5") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onDodaj(miasto, ulica) },
-                enabled = miasto.isNotBlank() && ulica.isNotBlank()
-            ) { Text("Dodaj") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Anuluj") }
-        }
+    OutlinedTextField(
+        value = szukaj,
+        onValueChange = { szukaj = it; onWyczysc() },
+        label = { Text("Budynek") },
+        placeholder = { Text("Wpisz ulicę...") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true
     )
+
+    if (szukamy) {
+        pasujace.take(5).forEach { b ->
+            TextButton(
+                onClick = { szukaj = b.displayNazwa(); onWybierz(b) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(b.displayNazwa(), modifier = Modifier.weight(1f))
+            }
+        }
+        if (!jestDokladny) {
+            TextButton(onClick = { onDodaj(tekst) }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Dodaj budynek: $tekst", modifier = Modifier.weight(1f))
+            }
+        }
+    }
 }
 
 private fun nazwaMiesiaca(m: Int) =

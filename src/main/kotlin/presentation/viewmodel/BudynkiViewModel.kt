@@ -52,7 +52,7 @@ class BudynkiViewModel(
         }
     }
 
-    fun dodajBudynek(miasto: String, ulica: String) {
+    fun dodajBudynek(miasto: String, ulica: String, onSuccess: (Budynek) -> Unit = {}) {
         scope.launch {
             isLoading = true
             errorMessage = null
@@ -63,6 +63,7 @@ class BudynkiViewModel(
                     .onSuccess {
                         successMessage = "Dodano budynek: ${it.pelnyAdres}"
                         zaladujBudynki()
+                        onSuccess(it)
                     }
                     .onFailure { errorMessage = "Błąd: ${it.message}" }
             }

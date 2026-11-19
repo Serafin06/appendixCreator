@@ -26,6 +26,8 @@ fun BudynkiScreen(viewModel: BudynkiViewModel) {
     var ulica by remember { mutableStateOf("") }
     var budynekDoUsuniecia by remember { mutableStateOf<Budynek?>(null) }
 
+    LaunchedEffect(Unit) { viewModel.zaladujBudynki() }
+
     LaunchedEffect(viewModel.successMessage) {
         if (viewModel.successMessage != null) {
             ulica = ""  // Czyścimy tylko ulicę, miasto zostaje
@@ -90,8 +92,7 @@ fun BudynkiScreen(viewModel: BudynkiViewModel) {
                     label = { Text("Miasto") },
                     placeholder = { Text("Katowice") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    enabled = !viewModel.isLoading
+                    singleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -107,7 +108,6 @@ fun BudynkiScreen(viewModel: BudynkiViewModel) {
                     placeholder = { Text("np. ul. Kwiatowa 5") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    enabled = !viewModel.isLoading
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
