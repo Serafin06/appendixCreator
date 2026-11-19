@@ -16,9 +16,11 @@ import pl.rafapp.marko.appendixCreator.domain.model.*
 import pl.rafapp.marko.appendixCreator.presentation.ui.component.ConfirmDialog
 import pl.rafapp.marko.appendixCreator.presentation.viewmodel.BudynkiViewModel
 import pl.rafapp.marko.appendixCreator.presentation.viewmodel.PraceViewModel
+import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.Month
+import java.time.ZoneOffset
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -304,6 +306,24 @@ fun FormularzPracy(
 
     var pokazDatePicker by remember { mutableStateOf(false) }
     var pokazMaterialDialog by remember { mutableStateOf(false) }
+
+    if (pokazDatePicker) {
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = data.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { pokazDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let {
+                        data = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()
+                    }
+                    pokazDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { pokazDatePicker = false }) { Text("Anuluj") } }
+        ) { DatePicker(state = state) }
+    }
 
     LaunchedEffect(viewModel.successMessage) {
         if (viewModel.successMessage != null) {
